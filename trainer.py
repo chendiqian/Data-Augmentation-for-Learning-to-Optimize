@@ -1,0 +1,81 @@
+import torch
+from torch_geometric.utils import scatter
+from torch_scatter import scatter_sum
+
+from data.utils import calc_violation
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+class PlainGNNTrainer:
+    def __init__(self,
+                 loss_type,
+                 coeff_obj,
+                 coeff_vio,
+                 ):
+        self.best_objgap = 1.e8
+        self.patience = 0
+        self.loss_type = loss_type
+        if loss_type == 'l2':
+            self.loss_func = lambda x: x ** 2
+        elif loss_type == 'l1':
+            self.loss_func = lambda x: x.abs()
+        else:
+            raise ValueError
+        self.coeff_obj = coeff_obj
+        self.coeff_vio = coeff_vio
+
+    def train(self, dataloader, model, optimizer):
+        model.train()
+
+        train_losses = 0.
+        train_vios = 0.
+        num_graphs = 0
+        for i, data in enumerate(dataloader):
+            optimizer.zero_grad()
+            data = data.to(device)
+
+            pred = model(data)
+            label = data.x_solution
+
+            loss = self.loss_func(pred - label)
+            # mean over each variable in an instance, then mean over instances
+            loss = scatter(loss, data['vals'].batch, dim=0, reduce='mean').mean()
+
+            loss_vio = (calc_violation(pred, data) ** 2).mean()
+
+            train_losses += loss.detach() * data.num_graphs
+            train_vios += loss_vio.detach() * data.num_graphs
+            num_graphs += data.num_graphs
+
+            if self.coeff_vio > 0:
+                loss = loss * self.coeff_obj + loss_vio * self.coeff_vio
+
+            # use both L2 loss and Cos similarity loss
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
+            optimizer.step()
+
+        return train_losses.item() / num_graphs, train_vios.item() / num_graphs
+
+    @torch.no_grad()
+    def eval(self, dataloader, model):
+        model.eval()
+
+        objgaps = []
+        violations = []
+        for i, data in enumerate(dataloader):
+            data = data.to(device)
+            opt_obj = data.obj_solution
+            pred_x = model(data).relu()  # (nnodes,)
+
+            batch_obj = scatter_sum(pred_x * data.q, data['vals'].batch, dim=0)
+            obj_gap = torch.abs((opt_obj - batch_obj) / opt_obj)
+            violation = calc_violation(pred_x, data)
+
+            objgaps.append(obj_gap)
+            violations.append(violation)
+
+        objgaps = torch.cat(objgaps, dim=0).mean().item()
+        violations = torch.cat(violations, dim=0).mean().item()
+        return objgaps, violations
