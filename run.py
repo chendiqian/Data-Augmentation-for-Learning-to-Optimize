@@ -1,5 +1,4 @@
 import os
-from functools import partial
 
 import hydra
 import copy
@@ -39,19 +38,18 @@ def main(args: DictConfig):
         test_set = test_set[:20]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    collate_fn = partial(collate_fn_lp_base)
     train_loader = DataLoader(train_set,
                               batch_size=args.batchsize,
                               shuffle=True,
-                              collate_fn=collate_fn)
+                              collate_fn=collate_fn_lp_base)
     val_loader = DataLoader(valid_set,
                             batch_size=args.val_batchsize,
                             shuffle=False,
-                            collate_fn=collate_fn)
+                            collate_fn=collate_fn_lp_base)
     test_loader = DataLoader(test_set,
                              batch_size=args.val_batchsize,
                              shuffle=False,
-                             collate_fn=collate_fn)
+                             collate_fn=collate_fn_lp_base)
 
     best_val_objgaps = []
     test_objgaps = []
