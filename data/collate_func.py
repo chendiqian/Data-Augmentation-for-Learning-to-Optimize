@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import torch
 from torch_geometric.data import Data, Batch
@@ -20,3 +20,10 @@ def collate_fn_lp_base(graphs: List[Data]):
         new_batch.norm_dict = norm_dict
 
     return new_batch
+
+
+def collate_pos_pair(graphs: List[Tuple[Data, Data]]):
+    graphs1, graphs2 = zip(*graphs)
+    batch1 = collate_fn_lp_base(graphs1)
+    batch2 = collate_fn_lp_base(graphs2)
+    return batch1, batch2

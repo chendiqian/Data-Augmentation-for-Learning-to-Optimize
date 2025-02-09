@@ -1,6 +1,8 @@
 import queue
 import threading
 
+from typing import Sequence
+
 
 class BackgroundGenerator(threading.Thread):
     def __init__(self, dataloader, device, max_prefetch=1):
@@ -15,7 +17,10 @@ class BackgroundGenerator(threading.Thread):
 
     def run(self):
         for i, batch in enumerate(self.dataloader):
-            self.queue.put(batch.to(self.device, non_blocking=True))
+            if isinstance(batch, Sequence):
+                self.queue.put([data.to(self.device, non_blocking=True) for data in batch])
+            else:
+                self.queue.put(batch.to(self.device, non_blocking=True))
         self.queue.put(None)
 
     def next(self):

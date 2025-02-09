@@ -1,7 +1,9 @@
+from typing import Tuple
+
 import torch
 from torch_geometric.data import HeteroData
 from torch_geometric.transforms import BaseTransform
-from torch_geometric.utils import degree
+from torch_geometric.utils import degree, bipartite_subgraph
 
 
 class GCNNorm(BaseTransform):
@@ -25,3 +27,67 @@ class GCNNorm(BaseTransform):
             if src != dst:
                 data[(dst, rel, src)].norm = norm
         return data
+
+
+class DropConstraintNode(BaseTransform):
+    """
+    Trivially drop constraint nodes.
+    This might violate the original LP problem.
+    """
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def create_sample(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        prob = torch.rand(m)
+        node_mask = prob > self.p
+
+        # modify cons 2 vals edge_index
+        c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
+            subset=(node_mask.bool(), torch.ones(n).bool()),
+            edge_index=data[('cons', 'to', 'vals')].edge_index,
+            edge_attr=data[('cons', 'to', 'vals')].edge_attr,
+            relabel_nodes=True,
+            size=(m, n),
+            return_edge_mask=False)
+
+        # modify obj 2 cons edge_index
+        o2c_edge_index, o2c_edge_attr = bipartite_subgraph(
+            subset=(torch.ones(1).bool(), node_mask.bool()),
+            edge_index=data[('obj', 'to', 'cons')].edge_index,
+            edge_attr=data[('obj', 'to', 'cons')].edge_attr,
+            relabel_nodes=True,
+            size=(1, m),
+            return_edge_mask=False)
+
+        new_data = data.__class__(
+                cons={
+                    'num_nodes': node_mask.sum(),
+                    'x': data['cons'].x[node_mask],
+                },
+                vals={
+                    'num_nodes': n,
+                    'x': data['vals'].x,
+                },
+                obj={
+                    'num_nodes': 1,
+                    'x': data['obj'].x,
+                },
+                cons__to__vals={'edge_index': c2v_edge_index,
+                                'edge_attr': c2v_edge_attr},
+                obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                               'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+                obj__to__cons={'edge_index': o2c_edge_index,
+                               'edge_attr': o2c_edge_attr},
+                x_solution=data.x_solution,
+                obj_solution=data.obj_solution,
+                q=data.q,
+                b=data.b[node_mask],
+        )
+        return new_data
+
+    def forward(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
+        data1 = self.create_sample(data)
+        data2 = self.create_sample(data)
+        return data1, data2
