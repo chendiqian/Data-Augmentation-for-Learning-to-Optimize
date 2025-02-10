@@ -71,7 +71,7 @@ class Encoder(torch.nn.Module):
         edge_attr = self.bond_encoder(data.edge_attr)
 
         for i in range(self.num_layers):
-            x = self.gcns[i](x, data.edge_index, edge_attr, data.batch, data.norm)
+            x = self.gcns[i](x, data.edge_index, edge_attr, data.batch, data.norm if hasattr(data, 'norm') else None)
 
         graph_emb = global_mean_pool(x, data.batch)
         pred = self.fc_obj(graph_emb)

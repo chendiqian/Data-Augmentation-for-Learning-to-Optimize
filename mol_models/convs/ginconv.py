@@ -12,8 +12,8 @@ class GINEConv(MessagePassing):
         self.mlp = MLP([hid_dim] * (num_mlp_layers + 1), norm=norm, plain_last=False)
         self.eps = torch.nn.Parameter(torch.Tensor([1.]))
 
-    def forward(self, x, edge_index, edge_attr, batch):
-        x = self.lin_src(x)
+    def forward(self, x, edge_index, edge_attr, batch, *args):
+        x = self.lin(x)
 
         if edge_attr is not None and hasattr(self, 'lin_edge'):
             edge_attr = self.lin_edge(edge_attr)
