@@ -15,7 +15,6 @@ from data.collate_func import collate_fn_lp_base
 from data.transforms import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
 from models.hetero_gnn import TripartiteHeteroGNN
-# from models.hetero_encoder import TripartiteHeteroEncoder
 from trainer import PlainGNNTrainer
 from data.utils import save_run_config
 
@@ -66,27 +65,15 @@ def main(args: DictConfig):
                                     num_mlp_layers=args.num_mlp_layers,
                                     norm=args.norm).to(device)
 
-        # pretrained_model = TripartiteHeteroPretrainGNN(
-        #     conv=args.conv,
-        #     head=args.gat.heads,
-        #     concat=args.gat.concat,
-        #     hid_dim=args.hidden,
-        #     num_encode_layers=args.num_encode_layers,
-        #     num_conv_layers=args.num_conv_layers,
-        #     num_pred_layers=args.num_pred_layers,
-        #     num_mlp_layers=args.num_mlp_layers,
-        #     norm=args.norm)
-
-        # pretrained_model.load_state_dict(torch.load(args.modelpath, map_location=device))
-        # extractor = pretrained_model.encoder
-
         model.encoder.load_state_dict(torch.load(args.modelpath, map_location=device))
 
         best_model = copy.deepcopy(model.state_dict())
 
-        # optimizer = optim.Adam([{'params': model.encoder.parameters(), 'lr': 1.e-5},
-        #                         {'params': model.predictor.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
-        optimizer = optim.Adam(model.predictor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        if args.train_whole:
+            optimizer = optim.Adam([{'params': model.encoder.parameters(), 'lr': 1.e-5},
+                                    {'params': model.predictor.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
+        else:
+            optimizer = optim.Adam(model.predictor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                          mode='min',
                                                          factor=0.5,
