@@ -4,7 +4,6 @@ wandb:
   enable: False
 
 debug: false
-datapath: /work/log1/chendi.qian/qp_400_new
 runs: 1
 losstype: l1
 ckpt: true

@@ -5,12 +5,11 @@ import torch
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from torch import optim
-from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torch_geometric.transforms import Compose
 from tqdm import tqdm
 
-from data.collate_func import collate_pos_pair
-from data.dataset import LPDataset
+from torch_geometric.datasets import ZINC
 from data.prefetch_generator import BackgroundGenerator
 from data.transforms import GCNNorm, RandomDropNode
 from data.utils import save_run_config
@@ -33,8 +32,8 @@ def main(args: DictConfig):
     if 'gcn' in args.conv:
         transform.append(GCNNorm())
     transform = Compose(transform)
-    train_set = LPDataset(args.datapath, 'train', transform=transform)
-    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
+    train_set = ZINC('./datasets', subset=True, split='train', transform=transform)
+    valid_set = ZINC('./datasets', subset=True, split='val', transform=transform)
     if args.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
@@ -42,12 +41,10 @@ def main(args: DictConfig):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_loader = DataLoader(train_set,
                               batch_size=args.batchsize,
-                              shuffle=True,
-                              collate_fn=collate_pos_pair)
+                              shuffle=True)
     val_loader = DataLoader(valid_set,
                             batch_size=args.batchsize,
-                            shuffle=False,
-                            collate_fn=collate_pos_pair)
+                            shuffle=False)
 
     for run in range(args.runs):
         model = Encoder(conv=args.conv,

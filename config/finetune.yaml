@@ -5,7 +5,6 @@ wandb:
 
 debug: false
 modelpath: ./pretrained/best_model0.pt
-datapath: /work/log1/chendi.qian/qp_400_new
 runs: 1
 losstype: l1
 ckpt: true
