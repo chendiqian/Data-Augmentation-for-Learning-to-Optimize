@@ -12,8 +12,7 @@ lr: 1.e-3
 weight_decay: 0.
 epoch: 1000
 patience: 100
-batchsize: 64
-val_batchsize: 64
+batchsize: 256
 drop_rate: 0.1
 temperature: 0.1
 

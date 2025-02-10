@@ -45,7 +45,7 @@ def main(args: DictConfig):
                               shuffle=True,
                               collate_fn=collate_pos_pair)
     val_loader = DataLoader(valid_set,
-                            batch_size=args.val_batchsize,
+                            batch_size=args.batchsize,
                             shuffle=False,
                             collate_fn=collate_pos_pair)
 
