@@ -84,6 +84,8 @@ def main(args: DictConfig):
 
         best_model = copy.deepcopy(model.state_dict())
 
+        # optimizer = optim.Adam([{'params': model.encoder.parameters(), 'lr': 1.e-5},
+        #                         {'params': model.predictor.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
         optimizer = optim.Adam(model.predictor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                          mode='min',
