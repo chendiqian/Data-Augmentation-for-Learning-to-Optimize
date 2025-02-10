@@ -179,15 +179,15 @@ class LinearTrainer:
         model.eval()
 
         preds = []
-        ys = []
-        for i, data in enumerate(dataloader):
+        labels = []
+        for i, (data, label) in enumerate(dataloader):
             data = data.to(device)
-            y = data.y
+            label = label.to(device)
             pred = model(data).squeeze()
             preds.append(pred)
-            ys.append(y)
+            labels.append(label)
 
         preds = torch.cat(preds, dim=0)
-        ys = torch.cat(ys, dim=0)
-        loss = self.loss_func(ys - preds).mean()
+        labels = torch.cat(labels, dim=0)
+        loss = self.loss_func(labels - preds).mean()
         return loss.item()

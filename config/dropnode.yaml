@@ -9,11 +9,14 @@ losstype: l1
 ckpt: true
 lr: 1.e-3
 weight_decay: 0.
+pretrain_epoch: 200
+pretrain_patience: 50
 epoch: 1000
 patience: 100
 batchsize: 256
 drop_rate: 0.1
 temperature: 0.1
+train_frac: 0.01
 
 eval_every: 1
 conv: gcnconv
