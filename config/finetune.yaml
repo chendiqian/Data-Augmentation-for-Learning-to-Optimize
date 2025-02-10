@@ -15,11 +15,8 @@ epoch: 1000
 patience: 100
 batchsize: 32
 val_batchsize: 128
-coeff_obj: 1.
-coeff_vio: 0.
 
 eval_every: 1
-tripartite: false
 conv: gcnconv
 gat:
   heads: 1

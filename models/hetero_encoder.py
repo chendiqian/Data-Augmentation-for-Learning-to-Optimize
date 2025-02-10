@@ -4,7 +4,7 @@ import torch
 from torch_geometric.nn import MLP
 from torch_geometric.typing import EdgeType, NodeType
 
-from models.hetero_conv import BipartiteConv, TripartiteConv
+from models.hetero_conv import TripartiteConv
 from models.convs.gatconv import GATv2Conv
 from models.convs.gcn2conv import GCN2Conv
 from models.convs.gcnconv import GCNConv
@@ -55,59 +55,6 @@ def get_conv_layer(conv: str,
         raise NotImplementedError
 
 
-class BipartiteHeteroEncoder(torch.nn.Module):
-    def __init__(self,
-                 conv,
-                 head,
-                 concat,
-                 hid_dim,
-                 num_encode_layers,
-                 num_conv_layers,
-                 num_mlp_layers,
-                 num_pred_layers,
-                 norm):
-        super().__init__()
-
-        self.num_layers = num_conv_layers
-        self.b_encoder = MLP([1] + [hid_dim] * num_encode_layers, norm=None)
-        self.q_encoder = MLP([1] + [hid_dim] * num_encode_layers, norm=None)
-
-        self.gcns = torch.nn.ModuleList()
-        for layer in range(num_conv_layers):
-            self.gcns.append(BipartiteConv(
-                get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
-                get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
-            ))
-
-        self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
-        self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
-
-    def init_embedding(self, data):
-        batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
-        edge_index_dict: Dict[EdgeType, torch.LongTensor] = data.edge_index_dict
-        edge_attr_dict: Dict[EdgeType, torch.FloatTensor] = data.edge_attr_dict
-        norm_dict: Dict[EdgeType, Optional[torch.FloatTensor]] = data.norm_dict
-
-        cons_embedding = self.b_encoder(data.b[:, None])
-        vals_embedding = self.q_encoder(data.q[:, None])
-
-        x_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding,
-                                                     'cons': cons_embedding}
-        x0_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding,
-                                                      'cons': cons_embedding}
-        return batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict, x0_dict
-
-    def forward(self, data):
-        batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict, x0_dict = self.init_embedding(data)
-
-        for i in range(self.num_layers):
-            x_dict = self.gcns[i](x_dict, x0_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
-
-        x_dict['vals'] = self.fc_vals(x_dict['vals'])
-        x_dict['cons'] = self.fc_cons(x_dict['cons'])
-        return x_dict
-
-
 class TripartiteHeteroEncoder(torch.nn.Module):
     def __init__(self,
                  conv,
@@ -137,8 +84,9 @@ class TripartiteHeteroEncoder(torch.nn.Module):
                 o2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
             ))
 
-        self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
-        self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
+        # self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
+        # self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
+        self.fc_obj = MLP([hid_dim] * num_pred_layers, norm=None)
 
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
@@ -165,6 +113,7 @@ class TripartiteHeteroEncoder(torch.nn.Module):
         for i in range(self.num_layers):
             x_dict = self.gcns[i](x_dict, x0_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
 
-        x_dict['vals'] = self.fc_vals(x_dict['vals'])
-        x_dict['cons'] = self.fc_cons(x_dict['cons'])
-        return x_dict
+        # x_dict['vals'] = self.fc_vals(x_dict['vals'])
+        # x_dict['cons'] = self.fc_cons(x_dict['cons'])
+        pred = self.fc_obj(x_dict['obj'])
+        return pred

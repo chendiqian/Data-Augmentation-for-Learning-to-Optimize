@@ -14,7 +14,7 @@ from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
 from data.transforms import GCNNorm, RandomDropNode
 from data.utils import save_run_config
-from models.hetero_pretrain_gnn import BipartiteHeteroPretrainGNN, TripartiteHeteroPretrainGNN
+from models.hetero_pretrain_gnn import TripartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer
 
 
@@ -50,17 +50,15 @@ def main(args: DictConfig):
                             collate_fn=collate_pos_pair)
 
     for run in range(args.runs):
-        ModelClass = TripartiteHeteroPretrainGNN if args.tripartite else BipartiteHeteroPretrainGNN
-        model = ModelClass(conv=args.conv,
-                           head=args.gat.heads,
-                           concat=args.gat.concat,
-                           hid_dim=args.hidden,
-                           num_encode_layers=args.num_encode_layers,
-                           num_conv_layers=args.num_conv_layers,
-                           num_pred_layers=args.num_pred_layers,
-                           num_mlp_layers=args.num_mlp_layers,
-                           norm=args.norm,
-                           pooling=args.pooling).to(device)
+        model = TripartiteHeteroPretrainGNN(conv=args.conv,
+                                            head=args.gat.heads,
+                                            concat=args.gat.concat,
+                                            hid_dim=args.hidden,
+                                            num_encode_layers=args.num_encode_layers,
+                                            num_conv_layers=args.num_conv_layers,
+                                            num_pred_layers=args.num_pred_layers,
+                                            num_mlp_layers=args.num_mlp_layers,
+                                            norm=args.norm).to(device)
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,

@@ -14,7 +14,7 @@ from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
 from data.transforms import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
-from models.hetero_gnn import BipartiteHeteroGNN, TripartiteHeteroGNN
+from models.hetero_gnn import TripartiteHeteroGNN
 from trainer import PlainGNNTrainer
 from data.utils import save_run_config
 
@@ -53,19 +53,17 @@ def main(args: DictConfig):
 
     best_val_objgaps = []
     test_objgaps = []
-    test_violations = []
 
     for run in range(args.runs):
-        ModelClass = TripartiteHeteroGNN if args.tripartite else BipartiteHeteroGNN
-        model = ModelClass(conv=args.conv,
-                           head=args.gat.heads,
-                           concat=args.gat.concat,
-                           hid_dim=args.hidden,
-                           num_encode_layers=args.num_encode_layers,
-                           num_conv_layers=args.num_conv_layers,
-                           num_pred_layers=args.num_pred_layers,
-                           num_mlp_layers=args.num_mlp_layers,
-                           norm=args.norm).to(device)
+        model = TripartiteHeteroGNN(conv=args.conv,
+                                    head=args.gat.heads,
+                                    concat=args.gat.concat,
+                                    hid_dim=args.hidden,
+                                    num_encode_layers=args.num_encode_layers,
+                                    num_conv_layers=args.num_conv_layers,
+                                    num_pred_layers=args.num_pred_layers,
+                                    num_mlp_layers=args.num_mlp_layers,
+                                    norm=args.norm).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -75,16 +73,15 @@ def main(args: DictConfig):
                                                          patience=50 // args.eval_every,
                                                          min_lr=1.e-5)
 
-        trainer = PlainGNNTrainer(args.losstype, args.coeff_obj, args.coeff_vio)
+        trainer = PlainGNNTrainer(args.losstype)
 
         pbar = tqdm(range(args.epoch))
         for epoch in pbar:
-            train_loss, train_vios = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+            train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
             stats_dict = {'train_loss': train_loss,
-                          'train_vios': train_vios,
                           'lr': scheduler.optimizer.param_groups[0]["lr"]}
             if epoch % args.eval_every == 0:
-                val_obj_gap, val_vio = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+                val_obj_gap = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
                 if scheduler is not None:
                     scheduler.step(val_obj_gap)
@@ -102,25 +99,20 @@ def main(args: DictConfig):
                     break
 
                 stats_dict['val_obj_gap'] = val_obj_gap
-                stats_dict['val_vio'] = val_vio
 
             pbar.set_postfix(stats_dict)
             wandb.log(stats_dict)
         best_val_objgaps.append(trainer.best_objgap)
 
         model.load_state_dict(best_model)
-        test_obj_gap, test_violation = trainer.eval(test_loader, model)
+        test_obj_gap = trainer.eval(test_loader, model)
         test_objgaps.append(test_obj_gap)
-        test_violations.append(test_violation)
-        wandb.log({'test_obj_gap': test_obj_gap,
-                   'test_violation': test_violation})
+        wandb.log({'test_obj_gap': test_obj_gap})
 
     wandb.log({
         'best_val_obj_gap': np.mean(best_val_objgaps),
         'test_obj_gap_mean': np.mean(test_objgaps),
-        'test_obj_gap_std': np.std(test_objgaps),
-        'test_violation_mean': np.mean(test_violations),
-        'test_violation_std': np.std(test_violations),
+        'test_obj_gap_std': np.std(test_objgaps)
     })
 
 

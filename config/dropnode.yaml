@@ -17,7 +17,6 @@ drop_rate: 0.1
 temperature: 0.1
 
 eval_every: 1
-tripartite: false
 conv: gcnconv
 gat:
   heads: 1
@@ -28,4 +27,3 @@ num_conv_layers: 8
 num_pred_layers: 2
 num_mlp_layers: 1
 norm: graphnorm
-pooling: mean
