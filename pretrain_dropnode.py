@@ -64,7 +64,7 @@ def main(args: DictConfig):
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                         mode='min',
+                                                         mode='max',
                                                          factor=0.5,
                                                          patience=50 // args.eval_every,
                                                          min_lr=1.e-5)
@@ -73,18 +73,19 @@ def main(args: DictConfig):
 
         pbar = tqdm(range(args.epoch))
         for epoch in pbar:
-            train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+            train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
             stats_dict = {'train_loss': train_loss,
+                          'train_top5acc': train_acc,
                           'lr': scheduler.optimizer.param_groups[0]["lr"]}
             if epoch % args.eval_every == 0:
-                val_loss = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+                val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
                 if scheduler is not None:
-                    scheduler.step(val_loss)
+                    scheduler.step(val_acc)
 
-                if trainer.best_val_loss > val_loss:
+                if trainer.best_val_acc < val_acc:
                     trainer.patience = 0
-                    trainer.best_val_loss = val_loss
+                    trainer.best_val_acc = val_acc
                     if args.ckpt:
                         torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run}.pt'))
                 else:
@@ -94,6 +95,7 @@ def main(args: DictConfig):
                     break
 
                 stats_dict['val_loss'] = val_loss
+                stats_dict['val_top5acc'] = val_acc
 
             pbar.set_postfix(stats_dict)
             wandb.log(stats_dict)

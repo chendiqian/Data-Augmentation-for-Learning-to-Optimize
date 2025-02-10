@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch_geometric.utils import scatter
 from torch_scatter import scatter_sum
 from pytorch_metric_learning.losses import NTXentLoss
@@ -88,6 +89,7 @@ class NTXentPretrainer:
     """
     def __init__(self, temperature):
         self.best_val_loss = 1.e8
+        self.best_val_acc = 0.
         self.patience = 0
         self.loss_func = NTXentLoss(temperature=temperature)
 
@@ -96,6 +98,7 @@ class NTXentPretrainer:
 
         train_losses = 0.
         num_graphs = 0
+        corrects = 0
         for i, (data1, data2) in enumerate(dataloader):
             optimizer.zero_grad()
             data1 = data1.to(device)
@@ -118,7 +121,14 @@ class NTXentPretrainer:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
             optimizer.step()
 
-        return train_losses.item() / num_graphs
+            # top 5 acc
+            cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
+            pos_mask = torch.eye(cos.shape[0], device=device).bool()
+            comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
+            sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
+            corrects += (sim_argsort < 5).sum()
+
+        return train_losses.item() / num_graphs, corrects / num_graphs
 
     @torch.no_grad()
     def eval(self, dataloader, model):
@@ -126,6 +136,7 @@ class NTXentPretrainer:
 
         val_losses = 0.
         num_graphs = 0
+        corrects = 0
         for i, (data1, data2) in enumerate(dataloader):
             data1 = data1.to(device)
             data2 = data2.to(device)
@@ -143,4 +154,11 @@ class NTXentPretrainer:
             val_losses += loss.detach() * data1.num_graphs
             num_graphs += data1.num_graphs
 
-        return val_losses.item() / num_graphs
+            # top 5 acc
+            cos = F.cosine_similarity(pred1[:, None], pred2[None, :], dim=-1)
+            pos_mask = torch.eye(cos.shape[0], device=device).bool()
+            comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
+            sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
+            corrects += (sim_argsort < 5).sum()
+
+        return val_losses.item() / num_graphs, corrects / num_graphs
