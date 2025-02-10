@@ -16,6 +16,7 @@ patience: 100
 batchsize: 32
 val_batchsize: 128
 train_whole: false
+train_frac: 0.01
 
 eval_every: 1
 conv: gcnconv

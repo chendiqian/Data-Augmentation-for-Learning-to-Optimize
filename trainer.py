@@ -136,3 +136,51 @@ class NTXentPretrainer:
             corrects += (sim_argsort < 5).sum()
 
         return val_losses.item() / num_graphs, corrects.item() / num_graphs
+
+
+class LinearTrainer:
+    def __init__(self, loss_type):
+        self.best_objgap = 1.e8
+        self.patience = 0
+        self.loss_type = loss_type
+        if loss_type == 'l2':
+            self.loss_func = lambda x: x ** 2
+        elif loss_type == 'l1':
+            self.loss_func = lambda x: x.abs()
+        else:
+            raise ValueError
+
+    def train(self, dataloader, model, optimizer):
+        model.train()
+
+        train_losses = 0.
+        num_graphs = 0
+        for i, (data, label) in enumerate(dataloader):
+            optimizer.zero_grad()
+            data = data.to(device)
+
+            obj_pred = model(data).squeeze()
+            loss = self.loss_func(obj_pred - label).mean()
+            train_losses += loss.detach() * data.shape[0]
+            num_graphs += data.shape[0]
+
+            # use both L2 loss and Cos similarity loss
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
+            optimizer.step()
+
+        return train_losses.item() / num_graphs
+
+    @torch.no_grad()
+    def eval(self, dataloader, model):
+        model.eval()
+
+        objgaps = []
+        for i, (data, label) in enumerate(dataloader):
+            data = data.to(device)
+            obj_pred = model(data).squeeze()
+            obj_gap = torch.abs((label - obj_pred) / label)
+            objgaps.append(obj_gap)
+
+        objgaps = torch.cat(objgaps, dim=0).mean().item()
+        return objgaps

@@ -14,6 +14,7 @@ epoch: 1000
 patience: 100
 batchsize: 32
 val_batchsize: 128
+train_frac: 1.
 
 eval_every: 1
 conv: gcnconv

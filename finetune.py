@@ -30,6 +30,8 @@ def main(args: DictConfig):
                entity="chendiqian")  # use your own entity
 
     train_set = LPDataset(args.datapath, 'train', transform=GCNNorm() if 'gcn' in args.conv else None)
+    if args.train_frac < 1:
+        train_set = train_set[:int(len(train_set) * args.train_frac)]
     valid_set = LPDataset(args.datapath, 'valid', transform=GCNNorm() if 'gcn' in args.conv else None)
     test_set = LPDataset(args.datapath, 'test', transform=GCNNorm() if 'gcn' in args.conv else None)
     if args.debug:
