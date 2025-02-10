@@ -13,7 +13,6 @@ class BipartiteHeteroPretrainGNN(torch.nn.Module):
                  num_encode_layers,
                  num_conv_layers,
                  num_pred_layers,
-                 hid_pred,
                  num_mlp_layers,
                  norm,
                  pooling):
@@ -27,6 +26,7 @@ class BipartiteHeteroPretrainGNN(torch.nn.Module):
             num_encode_layers,
             num_conv_layers,
             num_mlp_layers,
+            num_pred_layers,
             norm)
 
         if pooling == 'mean':
@@ -38,9 +38,7 @@ class BipartiteHeteroPretrainGNN(torch.nn.Module):
         else:
             raise NotImplementedError
 
-        if hid_pred == -1:
-            hid_pred = hid_dim
-        self.predictor = MLP([hid_dim * 2] + [hid_pred] * num_pred_layers, norm=None)
+        self.predictor = MLP([hid_dim * 2, hid_dim * 4, hid_dim], norm=None)
 
     def forward(self, data):
         x_dict = self.encoder(data)
@@ -59,7 +57,6 @@ class TripartiteHeteroPretrainGNN(torch.nn.Module):
                  num_encode_layers,
                  num_conv_layers,
                  num_pred_layers,
-                 hid_pred,
                  num_mlp_layers,
                  norm,
                  pooling):
@@ -73,6 +70,7 @@ class TripartiteHeteroPretrainGNN(torch.nn.Module):
             num_encode_layers,
             num_conv_layers,
             num_mlp_layers,
+            num_pred_layers,
             norm
         )
 
@@ -86,9 +84,7 @@ class TripartiteHeteroPretrainGNN(torch.nn.Module):
         else:
             raise NotImplementedError
 
-        if hid_pred == -1:
-            hid_pred = hid_dim
-        self.predictor = MLP([hid_dim * 2] + [hid_pred] * num_pred_layers, norm=None)
+        self.predictor = MLP([hid_dim * 2, hid_dim * 4, hid_dim], norm=None)
 
     def forward(self, data):
         x_dict = self.encoder(data)

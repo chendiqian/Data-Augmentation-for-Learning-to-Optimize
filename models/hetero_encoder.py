@@ -64,6 +64,7 @@ class BipartiteHeteroEncoder(torch.nn.Module):
                  num_encode_layers,
                  num_conv_layers,
                  num_mlp_layers,
+                 num_pred_layers,
                  norm):
         super().__init__()
 
@@ -77,6 +78,9 @@ class BipartiteHeteroEncoder(torch.nn.Module):
                 get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
                 get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
             ))
+
+        self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
+        self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
 
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
@@ -99,6 +103,8 @@ class BipartiteHeteroEncoder(torch.nn.Module):
         for i in range(self.num_layers):
             x_dict = self.gcns[i](x_dict, x0_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
 
+        x_dict['vals'] = self.fc_vals(x_dict['vals'])
+        x_dict['cons'] = self.fc_cons(x_dict['cons'])
         return x_dict
 
 
@@ -111,6 +117,7 @@ class TripartiteHeteroEncoder(torch.nn.Module):
                  num_encode_layers,
                  num_conv_layers,
                  num_mlp_layers,
+                 num_pred_layers,
                  norm):
         super().__init__()
 
@@ -129,6 +136,9 @@ class TripartiteHeteroEncoder(torch.nn.Module):
                 c2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None, head, concat),
                 o2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
             ))
+
+        self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
+        self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
 
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
@@ -155,4 +165,6 @@ class TripartiteHeteroEncoder(torch.nn.Module):
         for i in range(self.num_layers):
             x_dict = self.gcns[i](x_dict, x0_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
 
+        x_dict['vals'] = self.fc_vals(x_dict['vals'])
+        x_dict['cons'] = self.fc_cons(x_dict['cons'])
         return x_dict
