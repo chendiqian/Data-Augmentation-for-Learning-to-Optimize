@@ -44,10 +44,10 @@ def main(args: DictConfig):
                               batch_size=args.batchsize,
                               shuffle=True)
     val_loader = DataLoader(valid_set,
-                            batch_size=args.val_batchsize,
+                            batch_size=args.batchsize,
                             shuffle=False)
     test_loader = DataLoader(test_set,
-                             batch_size=args.val_batchsize,
+                             batch_size=args.batchsize,
                              shuffle=False)
 
     best_val_loss = []

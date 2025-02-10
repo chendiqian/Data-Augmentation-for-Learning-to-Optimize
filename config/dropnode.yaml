@@ -11,15 +11,16 @@ lr: 1.e-3
 weight_decay: 0.
 pretrain_epoch: 200
 pretrain_patience: 50
+pretrain_batchsize: 256
 epoch: 1000
 patience: 100
-batchsize: 256
+batchsize: 128
 drop_rate: 0.1
 temperature: 0.1
 train_frac: 0.01
 
 eval_every: 1
-conv: gcnconv
+conv: ginconv
 hidden: 192
 num_conv_layers: 5
 num_pred_layers: 2

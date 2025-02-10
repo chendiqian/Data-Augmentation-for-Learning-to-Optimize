@@ -52,10 +52,10 @@ def main(args: DictConfig):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     pretrain_loader = DataLoader(pretrain_set,
-                              batch_size=args.batchsize,
+                              batch_size=args.pretrain_batchsize,
                               shuffle=True)
     preval_loader = DataLoader(prevalid_set,
-                            batch_size=args.batchsize,
+                            batch_size=args.pretrain_batchsize,
                             shuffle=False)
 
     finetune_train_loader = DataLoader(finetune_train_set,
