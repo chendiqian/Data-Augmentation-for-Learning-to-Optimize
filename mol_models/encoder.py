@@ -39,7 +39,7 @@ class ZINCBondEncoder(torch.nn.Module):
 class ZINCAtomEncoder(torch.nn.Module):
     def __init__(self, hidden):
         super(ZINCAtomEncoder, self).__init__()
-        self.embedding = torch.nn.Embedding(num_embeddings=21, embedding_dim=hidden)
+        self.embedding = torch.nn.Embedding(num_embeddings=28, embedding_dim=hidden)
         torch.nn.init.xavier_uniform_(self.embedding.weight.data)
 
     def forward(self, x):
