@@ -29,10 +29,10 @@ class GCNNorm(BaseTransform):
         return data
 
 
-class DropConstraintNode(BaseTransform):
+class RandomDropNode(BaseTransform):
     """
-    Trivially drop constraint nodes.
-    This might violate the original LP problem.
+    Trivially drop variable and constraint nodes.
+    This will violate the original LP problem.
     """
     def __init__(self, p):
         assert 0 < p < 1
@@ -40,12 +40,12 @@ class DropConstraintNode(BaseTransform):
 
     def create_sample(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        prob = torch.rand(m)
-        node_mask = prob > self.p
+        cons_node_mask = torch.rand(m) > self.p
+        vals_node_mask = torch.rand(n) > self.p
 
         # modify cons 2 vals edge_index
         c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
-            subset=(node_mask.bool(), torch.ones(n).bool()),
+            subset=(cons_node_mask.bool(), vals_node_mask.bool()),
             edge_index=data[('cons', 'to', 'vals')].edge_index,
             edge_attr=data[('cons', 'to', 'vals')].edge_attr,
             relabel_nodes=True,
@@ -54,21 +54,30 @@ class DropConstraintNode(BaseTransform):
 
         # modify obj 2 cons edge_index
         o2c_edge_index, o2c_edge_attr = bipartite_subgraph(
-            subset=(torch.ones(1).bool(), node_mask.bool()),
+            subset=(torch.ones(1).bool(), cons_node_mask.bool()),
             edge_index=data[('obj', 'to', 'cons')].edge_index,
             edge_attr=data[('obj', 'to', 'cons')].edge_attr,
             relabel_nodes=True,
             size=(1, m),
             return_edge_mask=False)
 
+        # modify obj 2 vals edge_index
+        o2v_edge_index, o2v_edge_attr = bipartite_subgraph(
+            subset=(torch.ones(1).bool(), vals_node_mask.bool()),
+            edge_index=data[('obj', 'to', 'vals')].edge_index,
+            edge_attr=data[('obj', 'to', 'vals')].edge_attr,
+            relabel_nodes=True,
+            size=(1, n),
+            return_edge_mask=False)
+
         new_data = data.__class__(
                 cons={
-                    'num_nodes': node_mask.sum(),
-                    'x': data['cons'].x[node_mask],
+                    'num_nodes': cons_node_mask.sum(),
+                    'x': data['cons'].x[cons_node_mask],
                 },
                 vals={
-                    'num_nodes': n,
-                    'x': data['vals'].x,
+                    'num_nodes': vals_node_mask.sum(),
+                    'x': data['vals'].x[vals_node_mask],
                 },
                 obj={
                     'num_nodes': 1,
@@ -76,14 +85,12 @@ class DropConstraintNode(BaseTransform):
                 },
                 cons__to__vals={'edge_index': c2v_edge_index,
                                 'edge_attr': c2v_edge_attr},
-                obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                               'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+                obj__to__vals={'edge_index': o2v_edge_index,
+                               'edge_attr': o2v_edge_attr},
                 obj__to__cons={'edge_index': o2c_edge_index,
                                'edge_attr': o2c_edge_attr},
-                x_solution=data.x_solution,
-                obj_solution=data.obj_solution,
-                q=data.q,
-                b=data.b[node_mask],
+                q=data.q[vals_node_mask],
+                b=data.b[cons_node_mask],
         )
         return new_data
 

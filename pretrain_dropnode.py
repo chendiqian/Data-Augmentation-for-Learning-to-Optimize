@@ -1,8 +1,6 @@
-import copy
 import os
 
 import hydra
-import numpy as np
 import torch
 import wandb
 from omegaconf import DictConfig, OmegaConf
@@ -14,7 +12,7 @@ from tqdm import tqdm
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, DropConstraintNode
+from data.transforms import GCNNorm, RandomDropNode
 from data.utils import save_run_config
 from models.hetero_pretrain_gnn import BipartiteHeteroPretrainGNN, TripartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer
@@ -31,7 +29,7 @@ def main(args: DictConfig):
                entity="chendiqian")  # use your own entity
 
     # drop node first, then normalize degree
-    transform = [DropConstraintNode(args.drop_rate)]
+    transform = [RandomDropNode(args.drop_rate)]
     if 'gcn' in args.conv:
         transform.append(GCNNorm())
     transform = Compose(transform)
@@ -60,7 +58,6 @@ def main(args: DictConfig):
                            num_encode_layers=args.num_encode_layers,
                            num_conv_layers=args.num_conv_layers,
                            num_pred_layers=args.num_pred_layers,
-                           hid_pred=args.hid_pred,
                            num_mlp_layers=args.num_mlp_layers,
                            norm=args.norm,
                            pooling=args.pooling).to(device)
