@@ -5,16 +5,15 @@ import copy
 import numpy as np
 import torch
 from torch import optim
-from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 import wandb
 from omegaconf import DictConfig, OmegaConf
 
-from data.dataset import LPDataset
-from data.collate_func import collate_fn_lp_base
+from torch_geometric.datasets import ZINC
 from data.transforms import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
-from models.hetero_gnn import TripartiteHeteroGNN
+from mol_models.gnn import BasicGNN
 from trainer import PlainGNNTrainer
 from data.utils import save_run_config
 
@@ -29,11 +28,12 @@ def main(args: DictConfig):
                config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
                entity="chendiqian")  # use your own entity
 
-    train_set = LPDataset(args.datapath, 'train', transform=GCNNorm() if 'gcn' in args.conv else None)
+    transform = GCNNorm() if 'gcn' in args.conv else None
+    train_set = ZINC('./datasets', subset=True, split='train', transform=transform)
     if args.train_frac < 1:
         train_set = train_set[:int(len(train_set) * args.train_frac)]
-    valid_set = LPDataset(args.datapath, 'valid', transform=GCNNorm() if 'gcn' in args.conv else None)
-    test_set = LPDataset(args.datapath, 'test', transform=GCNNorm() if 'gcn' in args.conv else None)
+    valid_set = ZINC('./datasets', subset=True, split='val', transform=transform)
+    test_set = ZINC('./datasets', subset=True, split='test', transform=transform)
     if args.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
@@ -42,30 +42,24 @@ def main(args: DictConfig):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_loader = DataLoader(train_set,
                               batch_size=args.batchsize,
-                              shuffle=True,
-                              collate_fn=collate_fn_lp_base)
+                              shuffle=True)
     val_loader = DataLoader(valid_set,
                             batch_size=args.val_batchsize,
-                            shuffle=False,
-                            collate_fn=collate_fn_lp_base)
+                            shuffle=False)
     test_loader = DataLoader(test_set,
                              batch_size=args.val_batchsize,
-                             shuffle=False,
-                             collate_fn=collate_fn_lp_base)
+                             shuffle=False)
 
-    best_val_objgaps = []
-    test_objgaps = []
+    best_val_loss = []
+    test_losses = []
 
     for run in range(args.runs):
-        model = TripartiteHeteroGNN(conv=args.conv,
-                                    head=args.gat.heads,
-                                    concat=args.gat.concat,
-                                    hid_dim=args.hidden,
-                                    num_encode_layers=args.num_encode_layers,
-                                    num_conv_layers=args.num_conv_layers,
-                                    num_pred_layers=args.num_pred_layers,
-                                    num_mlp_layers=args.num_mlp_layers,
-                                    norm=args.norm).to(device)
+        model = BasicGNN(conv=args.conv,
+                         hid_dim=args.hidden,
+                         num_conv_layers=args.num_conv_layers,
+                         num_pred_layers=args.num_pred_layers,
+                         num_mlp_layers=args.num_mlp_layers,
+                         norm=args.norm).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -83,14 +77,14 @@ def main(args: DictConfig):
             stats_dict = {'train_loss': train_loss,
                           'lr': scheduler.optimizer.param_groups[0]["lr"]}
             if epoch % args.eval_every == 0:
-                val_obj_gap = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+                val_loss = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
                 if scheduler is not None:
-                    scheduler.step(val_obj_gap)
+                    scheduler.step(val_loss)
 
-                if trainer.best_objgap > val_obj_gap:
+                if trainer.best_val_loss > val_loss:
                     trainer.patience = 0
-                    trainer.best_objgap = val_obj_gap
+                    trainer.best_val_loss = val_loss
                     best_model = copy.deepcopy(model.state_dict())
                     if args.ckpt:
                         torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run}.pt'))
@@ -100,21 +94,21 @@ def main(args: DictConfig):
                 if trainer.patience > (args.patience // args.eval_every + 1):
                     break
 
-                stats_dict['val_obj_gap'] = val_obj_gap
+                stats_dict['val_loss'] = val_loss
 
             pbar.set_postfix(stats_dict)
             wandb.log(stats_dict)
-        best_val_objgaps.append(trainer.best_objgap)
+        best_val_loss.append(trainer.best_val_loss)
 
         model.load_state_dict(best_model)
-        test_obj_gap = trainer.eval(test_loader, model)
-        test_objgaps.append(test_obj_gap)
-        wandb.log({'test_obj_gap': test_obj_gap})
+        test_loss = trainer.eval(test_loader, model)
+        test_losses.append(test_loss)
+        wandb.log({'test_obj_gap': test_loss})
 
     wandb.log({
-        'best_val_obj_gap': np.mean(best_val_objgaps),
-        'test_obj_gap_mean': np.mean(test_objgaps),
-        'test_obj_gap_std': np.std(test_objgaps)
+        'best_val_loss': np.mean(best_val_loss),
+        'test_obj_loss_mean': np.mean(test_losses),
+        'test_obj_loss_std': np.std(test_losses)
     })
 
 

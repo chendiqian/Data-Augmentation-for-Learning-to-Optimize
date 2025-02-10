@@ -6,7 +6,7 @@ wandb:
 debug: false
 datapath: /work/log1/chendi.qian/qp_400_new
 runs: 1
-losstype: l2
+losstype: l1
 ckpt: true
 lr: 1.e-3
 weight_decay: 0.
@@ -18,12 +18,8 @@ temperature: 0.1
 
 eval_every: 1
 conv: gcnconv
-gat:
-  heads: 1
-  concat: false
-hidden: 128
-num_encode_layers: 2
-num_conv_layers: 8
+hidden: 192
+num_conv_layers: 5
 num_pred_layers: 2
 num_mlp_layers: 1
 norm: graphnorm

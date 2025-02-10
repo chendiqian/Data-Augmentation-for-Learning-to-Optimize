@@ -7,7 +7,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class PlainGNNTrainer:
     def __init__(self, loss_type):
-        self.best_objgap = 1.e8
+        self.best_val_loss = 1.e8
         self.patience = 0
         self.loss_type = loss_type
         if loss_type == 'l2':
@@ -27,7 +27,7 @@ class PlainGNNTrainer:
             data = data.to(device)
 
             obj_pred = model(data)
-            label = data.obj_solution
+            label = data.y
 
             loss = self.loss_func(obj_pred - label).mean()
 
@@ -45,16 +45,19 @@ class PlainGNNTrainer:
     def eval(self, dataloader, model):
         model.eval()
 
-        objgaps = []
+        preds = []
+        ys = []
         for i, data in enumerate(dataloader):
             data = data.to(device)
-            opt_obj = data.obj_solution
-            obj_pred = model(data)
-            obj_gap = torch.abs((opt_obj - obj_pred) / opt_obj)
-            objgaps.append(obj_gap)
+            y = data.y
+            pred = model(data)
+            preds.append(pred)
+            ys.append(y)
 
-        objgaps = torch.cat(objgaps, dim=0).mean().item()
-        return objgaps
+        preds = torch.cat(preds, dim=0)
+        ys = torch.cat(ys, dim=0)
+        loss = self.loss_func(ys - preds).mean()
+        return loss.item()
 
 
 class NTXentPretrainer:
@@ -140,7 +143,7 @@ class NTXentPretrainer:
 
 class LinearTrainer:
     def __init__(self, loss_type):
-        self.best_objgap = 1.e8
+        self.best_val_loss = 1.e8
         self.patience = 0
         self.loss_type = loss_type
         if loss_type == 'l2':
@@ -159,8 +162,8 @@ class LinearTrainer:
             optimizer.zero_grad()
             data = data.to(device)
 
-            obj_pred = model(data).squeeze()
-            loss = self.loss_func(obj_pred - label).mean()
+            pred = model(data).squeeze()
+            loss = self.loss_func(pred - label).mean()
             train_losses += loss.detach() * data.shape[0]
             num_graphs += data.shape[0]
 
@@ -175,12 +178,16 @@ class LinearTrainer:
     def eval(self, dataloader, model):
         model.eval()
 
-        objgaps = []
-        for i, (data, label) in enumerate(dataloader):
+        preds = []
+        ys = []
+        for i, data in enumerate(dataloader):
             data = data.to(device)
-            obj_pred = model(data).squeeze()
-            obj_gap = torch.abs((label - obj_pred) / label)
-            objgaps.append(obj_gap)
+            y = data.y
+            pred = model(data).squeeze()
+            preds.append(pred)
+            ys.append(y)
 
-        objgaps = torch.cat(objgaps, dim=0).mean().item()
-        return objgaps
+        preds = torch.cat(preds, dim=0)
+        ys = torch.cat(ys, dim=0)
+        loss = self.loss_func(ys - preds).mean()
+        return loss.item()

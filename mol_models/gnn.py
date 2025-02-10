@@ -1,28 +1,22 @@
 import torch
-from torch_geometric.nn import MLP, Linear
+from torch_geometric.nn import Linear
 
-from models.hetero_encoder import TripartiteHeteroEncoder
+from mol_models.encoder import Encoder
 
 
-class TripartiteHeteroGNN(torch.nn.Module):
+class BasicGNN(torch.nn.Module):
     def __init__(self,
                  conv,
-                 head,
-                 concat,
                  hid_dim,
-                 num_encode_layers,
                  num_conv_layers,
                  num_pred_layers,
                  num_mlp_layers,
                  norm):
         super().__init__()
 
-        self.encoder = TripartiteHeteroEncoder(
+        self.encoder = Encoder(
             conv,
-            head,
-            concat,
             hid_dim,
-            num_encode_layers,
             num_conv_layers,
             num_mlp_layers,
             num_pred_layers,

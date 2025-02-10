@@ -13,7 +13,7 @@ from omegaconf import DictConfig, OmegaConf
 from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
 from data.transforms import GCNNorm
-from models.hetero_encoder import TripartiteHeteroEncoder
+from mol_models.encoder import Encoder
 from trainer import LinearTrainer
 from data.utils import save_run_config
 
@@ -55,15 +55,12 @@ def main(args: DictConfig):
     best_val_objgaps = []
     test_objgaps = []
 
-    model = TripartiteHeteroEncoder(conv=args.conv,
-                                    head=args.gat.heads,
-                                    concat=args.gat.concat,
-                                    hid_dim=args.hidden,
-                                    num_encode_layers=args.num_encode_layers,
-                                    num_conv_layers=args.num_conv_layers,
-                                    num_pred_layers=args.num_pred_layers,
-                                    num_mlp_layers=args.num_mlp_layers,
-                                    norm=args.norm).to(device)
+    model = Encoder(conv=args.conv,
+                    hid_dim=args.hidden,
+                    num_conv_layers=args.num_conv_layers,
+                    num_pred_layers=args.num_pred_layers,
+                    num_mlp_layers=args.num_mlp_layers,
+                    norm=args.norm).to(device)
     model.load_state_dict(torch.load(args.modelpath, map_location=device))
 
     def get_feat_label(loader):
