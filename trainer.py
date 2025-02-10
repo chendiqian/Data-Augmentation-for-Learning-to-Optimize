@@ -128,7 +128,7 @@ class NTXentPretrainer:
             sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
             corrects += (sim_argsort < 5).sum()
 
-        return train_losses.item() / num_graphs, corrects / num_graphs
+        return train_losses.item() / num_graphs, corrects.item() / num_graphs
 
     @torch.no_grad()
     def eval(self, dataloader, model):
@@ -161,4 +161,4 @@ class NTXentPretrainer:
             sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
             corrects += (sim_argsort < 5).sum()
 
-        return val_losses.item() / num_graphs, corrects / num_graphs
+        return val_losses.item() / num_graphs, corrects.item() / num_graphs
