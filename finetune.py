@@ -1,5 +1,4 @@
 import os
-import pdb
 
 import hydra
 import copy
@@ -16,7 +15,7 @@ from data.collate_func import collate_fn_lp_base
 from data.transforms import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
 from models.hetero_gnn import TripartiteHeteroGNN
-from models.hetero_pretrain_gnn import TripartiteHeteroPretrainGNN
+# from models.hetero_encoder import TripartiteHeteroEncoder
 from trainer import PlainGNNTrainer
 from data.utils import save_run_config
 
@@ -67,21 +66,21 @@ def main(args: DictConfig):
                                     num_mlp_layers=args.num_mlp_layers,
                                     norm=args.norm).to(device)
 
-        pretrained_model = TripartiteHeteroPretrainGNN(
-            conv=args.conv,
-            head=args.gat.heads,
-            concat=args.gat.concat,
-            hid_dim=args.hidden,
-            num_encode_layers=args.num_encode_layers,
-            num_conv_layers=args.num_conv_layers,
-            num_pred_layers=args.num_pred_layers,
-            num_mlp_layers=args.num_mlp_layers,
-            norm=args.norm)
+        # pretrained_model = TripartiteHeteroPretrainGNN(
+        #     conv=args.conv,
+        #     head=args.gat.heads,
+        #     concat=args.gat.concat,
+        #     hid_dim=args.hidden,
+        #     num_encode_layers=args.num_encode_layers,
+        #     num_conv_layers=args.num_conv_layers,
+        #     num_pred_layers=args.num_pred_layers,
+        #     num_mlp_layers=args.num_mlp_layers,
+        #     norm=args.norm)
 
-        pretrained_model.load_state_dict(torch.load(args.modelpath, map_location=device))
-        extractor = pretrained_model.encoder
+        # pretrained_model.load_state_dict(torch.load(args.modelpath, map_location=device))
+        # extractor = pretrained_model.encoder
 
-        model.encoder.load_state_dict(extractor.state_dict())
+        model.encoder.load_state_dict(torch.load(args.modelpath, map_location=device))
 
         best_model = copy.deepcopy(model.state_dict())
 
