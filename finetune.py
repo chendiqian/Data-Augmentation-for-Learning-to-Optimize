@@ -46,15 +46,9 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
                                       shuffle=False)
 
     if args.finetune.whole:
-        train_loader = DataLoader(finetune_train_loader,
-                                  batch_size=args.finetune.batchsize,
-                                  shuffle=True)
-        val_loader = DataLoader(finetune_val_loader,
-                                batch_size=args.finetune.batchsize,
-                                shuffle=False)
-        test_loader = DataLoader(finetune_test_loader,
-                                 batch_size=args.finetune.batchsize,
-                                 shuffle=False)
+        train_loader = finetune_train_loader
+        val_loader = finetune_val_loader
+        test_loader = finetune_test_loader
         # finetune the whole model
         model = BasicGNN(conv=args.conv,
                          hid_dim=args.hidden,
