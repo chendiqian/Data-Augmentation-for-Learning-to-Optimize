@@ -14,7 +14,6 @@ patience: 100
 batchsize: 128
 train_frac: 1.
 
-eval_every: 1
 conv: ginconv
 hidden: 192
 num_conv_layers: 5
