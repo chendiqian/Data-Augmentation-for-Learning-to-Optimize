@@ -66,7 +66,7 @@ def main(args: DictConfig):
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                          mode='min',
                                                          factor=0.5,
-                                                         patience=50 // args.eval_every,
+                                                         patience=50,
                                                          min_lr=1.e-5)
 
         trainer = PlainGNNTrainer(args.losstype)
@@ -74,27 +74,26 @@ def main(args: DictConfig):
         pbar = tqdm(range(args.epoch))
         for epoch in pbar:
             train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+            val_loss = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+
+            if scheduler is not None:
+                scheduler.step(val_loss)
+
+            if trainer.best_val_loss > val_loss:
+                trainer.patience = 0
+                trainer.best_val_loss = val_loss
+                best_model = copy.deepcopy(model.state_dict())
+                if args.ckpt:
+                    torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run}.pt'))
+            else:
+                trainer.patience += 1
+
+            if trainer.patience > args.patience:
+                break
+
             stats_dict = {'train_loss': train_loss,
+                          'val_loss': val_loss,
                           'lr': scheduler.optimizer.param_groups[0]["lr"]}
-            if epoch % args.eval_every == 0:
-                val_loss = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
-
-                if scheduler is not None:
-                    scheduler.step(val_loss)
-
-                if trainer.best_val_loss > val_loss:
-                    trainer.patience = 0
-                    trainer.best_val_loss = val_loss
-                    best_model = copy.deepcopy(model.state_dict())
-                    if args.ckpt:
-                        torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run}.pt'))
-                else:
-                    trainer.patience += 1
-
-                if trainer.patience > (args.patience // args.eval_every + 1):
-                    break
-
-                stats_dict['val_loss'] = val_loss
 
             pbar.set_postfix(stats_dict)
             wandb.log(stats_dict)
