@@ -24,7 +24,7 @@ finetune:
   batchsize: 128
   train_frac: 0.01
   modelpath: null
-  whole: False
+  whole: true
   num_mlp_layers: 1  # only when not tune the whole model
 
 pretrain:
