@@ -35,7 +35,7 @@ def main(args: DictConfig):
     if 'gcn' in args.conv:
         transform.append(GCNNorm())
     transform = Compose(transform)
-    pretrain_set = ZINC('./datasets', subset=False, split='train', transform=transform)
+    pretrain_set = ZINC('./datasets', subset=True, split='train', transform=transform)
     prevalid_set = ZINC('./datasets', subset=True, split='val', transform=transform)
 
     transform = GCNNorm() if 'gcn' in args.conv else None
