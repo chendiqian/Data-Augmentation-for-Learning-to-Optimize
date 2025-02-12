@@ -12,7 +12,12 @@ from torch_geometric.transforms import Compose
 from tqdm import tqdm
 from torch_geometric.datasets import ZINC
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, RandomDropNode, RandomMaskNodeAttr, IdentityAugmentation, AugmentWrapper
+from data.transforms import (GCNNorm,
+                             RandomDropNode,
+                             RandomMaskNodeAttr,
+                             RandomDropEdge,
+                             IdentityAugmentation,
+                             AugmentWrapper)
 from data.utils import save_run_config
 from mol_models.encoder import Encoder
 from trainer import NTXentPretrainer
@@ -22,6 +27,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # drop node first, then normalize degree
     aug_list = [RandomMaskNodeAttr(args.pretrain.drop_rate),
                 RandomDropNode(args.pretrain.drop_rate),
+                RandomDropEdge(args.pretrain.drop_rate),
                 # IdentityAugmentation(),
                 ]
     transform = [AugmentWrapper(aug_list)]

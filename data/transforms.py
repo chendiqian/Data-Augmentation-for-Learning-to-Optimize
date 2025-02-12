@@ -78,6 +78,19 @@ class RandomMaskNodeAttr(BaseTransform):
         return data
 
 
+class RandomDropEdge(BaseTransform):
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def forward(self, data: Data) -> Data:
+        n = data.num_edges
+        mask = torch.rand(n) > self.p
+        data.edge_index = data.edge_index[:, mask]
+        data.edge_attr = data.edge_attr[mask]
+        return data
+
+
 class AugmentWrapper(BaseTransform):
     """
     Return 2 views of the graph
