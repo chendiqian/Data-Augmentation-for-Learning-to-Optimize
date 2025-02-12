@@ -51,7 +51,7 @@ class RandomDropNode(BaseTransform):
             relabel_nodes=True,
             return_edge_mask=False)
 
-        return Data(x=data.x[node_mask], edge_index=edge_index, edge_attr=edge_attr)
+        return Data(x=data.x[node_mask], edge_index=edge_index, edge_attr=edge_attr, y=data.y)
 
     def forward(self, data: Data) -> Data:
         data = self.create_sample(data)
@@ -74,8 +74,7 @@ class RandomMaskNodeAttr(BaseTransform):
     def forward(self, data: Data) -> Data:
         n = data.num_nodes
         node_masked = torch.rand(n) < self.p
-
-        data.node_masked = node_masked
+        data.x[node_masked] = -1
         return data
 
 
