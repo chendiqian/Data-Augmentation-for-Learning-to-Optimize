@@ -20,7 +20,9 @@ from trainer import NTXentPretrainer
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # drop node first, then normalize degree
-    aug_list = [RandomMaskNodeAttr(args.pretrain.drop_rate)]
+    aug_list = [RandomMaskNodeAttr(args.pretrain.drop_rate),
+                RandomDropNode(args.pretrain.drop_rate),
+                IdentityAugmentation()]
     transform = [AugmentWrapper(aug_list)]
     if 'gcn' in args.conv:
         transform.append(GCNNorm())
