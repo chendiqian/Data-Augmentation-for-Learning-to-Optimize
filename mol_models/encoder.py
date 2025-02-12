@@ -42,8 +42,11 @@ class ZINCAtomEncoder(torch.nn.Module):
         self.embedding = torch.nn.Embedding(num_embeddings=28, embedding_dim=hidden)
         torch.nn.init.xavier_uniform_(self.embedding.weight.data)
 
-    def forward(self, x):
-        return self.embedding(x.squeeze(1))
+    def forward(self, data):
+        x = self.embedding(data.x.squeeze(1))
+        if hasattr(data, 'node_masked'):
+            x[data.node_masked] = x[data.node_masked] * 0.
+        return x
 
 
 class Encoder(torch.nn.Module):
@@ -67,7 +70,7 @@ class Encoder(torch.nn.Module):
         self.fc_obj = MLP([hid_dim] * num_pred_layers, norm=None)
 
     def forward(self, data):
-        x = self.atom_encoder(data.x)
+        x = self.atom_encoder(data)
         edge_attr = self.bond_encoder(data.edge_attr)
 
         for i in range(self.num_layers):

@@ -12,7 +12,7 @@ from torch_geometric.transforms import Compose
 from tqdm import tqdm
 from torch_geometric.datasets import ZINC
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, RandomDropNode
+from data.transforms import GCNNorm, RandomDropNode, RandomMaskNodeAttr, IdentityAugmentation, AugmentWrapper
 from data.utils import save_run_config
 from mol_models.encoder import Encoder
 from trainer import NTXentPretrainer
@@ -20,7 +20,8 @@ from trainer import NTXentPretrainer
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # drop node first, then normalize degree
-    transform = [RandomDropNode(args.pretrain.drop_rate)]
+    aug_list = [RandomMaskNodeAttr(args.pretrain.drop_rate)]
+    transform = [AugmentWrapper(aug_list)]
     if 'gcn' in args.conv:
         transform.append(GCNNorm())
     transform = Compose(transform)
@@ -88,7 +89,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     return best_model
 
 
-@hydra.main(version_base=None, config_path='./config', config_name="dropnode")
+@hydra.main(version_base=None, config_path='./config', config_name="pretrain_finetune")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
 

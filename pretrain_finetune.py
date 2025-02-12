@@ -8,7 +8,7 @@ from finetune import finetune
 from pretrain import pretrain
 
 
-@hydra.main(version_base=None, config_path='./config', config_name="dropnode")
+@hydra.main(version_base=None, config_path='./config', config_name="pretrain_finetune")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
 

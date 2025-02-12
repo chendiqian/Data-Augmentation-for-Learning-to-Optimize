@@ -144,7 +144,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
     return best_model, trainer.best_val_loss, test_loss
 
 
-@hydra.main(version_base=None, config_path='./config', config_name="dropnode")
+@hydra.main(version_base=None, config_path='./config', config_name="pretrain_finetune")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
 
