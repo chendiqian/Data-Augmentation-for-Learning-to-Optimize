@@ -1,6 +1,6 @@
 from typing import Tuple, Sequence, List, Any
 
-from random import choices
+from random import choices, choice
 import torch
 from torch_geometric.data import Data
 from torch_geometric.transforms import BaseTransform
@@ -86,12 +86,13 @@ class AugmentWrapper(BaseTransform):
         self.transforms = transforms
 
     def forward(self, data: Data) -> Tuple[Data, Data]:
-        while True:
-            # I don't want 2 identity
-            t1, t2 = choices(self.transforms, k=2)
-            if not (isinstance(t1, IdentityAugmentation) and isinstance(t2, IdentityAugmentation)):
-                break
+        # while True:
+        #     # I don't want 2 identity
+        #     t1, t2 = choices(self.transforms, k=2)
+        #     if not (isinstance(t1, IdentityAugmentation) and isinstance(t2, IdentityAugmentation)):
+        #         break
+        selected_t = choice(self.transforms)
 
-        data1 = t1(data)
-        data2 = t2(data)
+        data1 = selected_t(data)
+        data2 = selected_t(data)
         return data1, data2
