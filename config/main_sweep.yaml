@@ -1,33 +1,54 @@
 program: run.py
 method: bayes
+project: main_50_100
+run_cap: 30
+entity: chendiqian
+
 metric:
   goal: minimize
   name: test_obj_gap_mean
 parameters:
-  debug: false
-  datapath: /work/log1/chendi.qian/ssl/gen_50_100_0.1
-  runs: 3
-  losstype: l2
-  ckpt: false
-  lr: 1.e-3
-  weight_decay: 0.
-  epoch: 1000
-  patience: 100
-  batchsize: 128
-  train_frac: 1.
+  wandb.enable:
+    value: true
+  debug:
+    value: false
+  datapath:
+    value: /work/log1/chendi.qian/ssl/gen_50_100_0.1
+  runs:
+    value: 3
+  losstype:
+    value: l2
+  ckpt:
+    value: false
+  lr:
+    value: 1.e-3
+  weight_decay:
+    value: 0.
+  epoch:
+    value: 1000
+  patience:
+    value: 100
+  batchsize:
+    value: 128
+  train_frac:
+    value: 1.
 
-  conv: gcnconv
+  conv:
+    value: gcnconv
   hidden:
     values: [64, 96, 128, 160, 192, 256]
   num_encode_layers:
     values: [2, 3]
   num_conv_layers:
     values: [3, 4, 5, 6, 7, 8]
-  num_pred_layers: 1
+  num_pred_layers:
+    value: 1
   backbone_pred_layers:
     values: [2, 3]
-  num_mlp_layers: 1  # for mlp in conv
-  norm: graphnorm
+  num_mlp_layers:
+    value: 1  # for mlp in conv
+  norm:
+    value: graphnorm
 
 command:
   - ${env}

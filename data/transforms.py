@@ -1,4 +1,5 @@
-from typing import Tuple
+from typing import Tuple, List
+from random import choices, choice
 
 import torch
 from torch_geometric.data import HeteroData
@@ -38,7 +39,7 @@ class RandomDropNode(BaseTransform):
         assert 0 < p < 1
         self.p = p
 
-    def create_sample(self, data: HeteroData) -> HeteroData:
+    def forward(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         cons_node_mask = torch.rand(m) > self.p
         vals_node_mask = torch.rand(n) > self.p
@@ -71,30 +72,45 @@ class RandomDropNode(BaseTransform):
             return_edge_mask=False)
 
         new_data = data.__class__(
-                cons={
-                    'num_nodes': cons_node_mask.sum(),
-                    'x': data['cons'].x[cons_node_mask],
-                },
-                vals={
-                    'num_nodes': vals_node_mask.sum(),
-                    'x': data['vals'].x[vals_node_mask],
-                },
-                obj={
-                    'num_nodes': 1,
-                    'x': data['obj'].x,
-                },
-                cons__to__vals={'edge_index': c2v_edge_index,
-                                'edge_attr': c2v_edge_attr},
-                obj__to__vals={'edge_index': o2v_edge_index,
-                               'edge_attr': o2v_edge_attr},
-                obj__to__cons={'edge_index': o2c_edge_index,
-                               'edge_attr': o2c_edge_attr},
-                q=data.q[vals_node_mask],
-                b=data.b[cons_node_mask],
+            cons={
+                'num_nodes': cons_node_mask.sum(),
+                'x': data['cons'].x[cons_node_mask],
+            },
+            vals={
+                'num_nodes': vals_node_mask.sum(),
+                'x': data['vals'].x[vals_node_mask],
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
+            obj__to__vals={'edge_index': o2v_edge_index,
+                           'edge_attr': o2v_edge_attr},
+            obj__to__cons={'edge_index': o2c_edge_index,
+                           'edge_attr': o2c_edge_attr},
+            q=data.q[vals_node_mask],
+            b=data.b[cons_node_mask],
         )
         return new_data
 
+
+class AugmentWrapper(BaseTransform):
+    """
+    Return 2 views of the graph
+    """
+    def __init__(self, transforms: List):
+        self.transforms = transforms
+
     def forward(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
-        data1 = self.create_sample(data)
-        data2 = self.create_sample(data)
+        # while True:
+        #     # I don't want 2 identity
+        #     t1, t2 = choices(self.transforms, k=2)
+        #     if not (isinstance(t1, IdentityAugmentation) and isinstance(t2, IdentityAugmentation)):
+        #         break
+        t1, t2 = choices(self.transforms, k=2)
+
+        data1 = t1(data)
+        data2 = t2(data)
         return data1, data2

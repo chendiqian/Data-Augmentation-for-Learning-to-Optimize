@@ -5,7 +5,8 @@ import copy
 import numpy as np
 import torch
 from torch import optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
+from torch_geometric.nn import MLP
 from tqdm import tqdm
 import wandb
 from omegaconf import DictConfig, OmegaConf
@@ -15,23 +16,15 @@ from data.collate_func import collate_fn_lp_base
 from data.transforms import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
 from models.hetero_gnn import TripartiteHeteroGNN
-from trainer import PlainGNNTrainer
+from models.hetero_backbone import TripartiteHeteroBackbone
+from trainer import PlainGNNTrainer, LinearTrainer
 from data.utils import save_run_config
 
 
-@hydra.main(version_base=None, config_path='./config', config_name="finetune")
-def main(args: DictConfig):
-    log_folder_name = save_run_config(args)
-
-    wandb.init(project=args.wandb.project,
-               name=args.wandb.name if args.wandb.name else None,
-               mode="online" if args.wandb.enable else "disabled",
-               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
-               entity="chendiqian")  # use your own entity
-
+def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pretrained_state_dict=None):
     train_set = LPDataset(args.datapath, 'train', transform=GCNNorm() if 'gcn' in args.conv else None)
-    if args.train_frac < 1:
-        train_set = train_set[:int(len(train_set) * args.train_frac)]
+    if args.finetune.train_frac < 1:
+        train_set = train_set[:int(len(train_set) * args.finetune.train_frac)]
     valid_set = LPDataset(args.datapath, 'valid', transform=GCNNorm() if 'gcn' in args.conv else None)
     test_set = LPDataset(args.datapath, 'test', transform=GCNNorm() if 'gcn' in args.conv else None)
     if args.debug:
@@ -41,80 +34,131 @@ def main(args: DictConfig):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_loader = DataLoader(train_set,
-                              batch_size=args.batchsize,
+                              batch_size=args.finetune.batchsize,
                               shuffle=True,
                               collate_fn=collate_fn_lp_base)
     val_loader = DataLoader(valid_set,
-                            batch_size=args.val_batchsize,
+                            batch_size=args.finetune.batchsize,
                             shuffle=False,
                             collate_fn=collate_fn_lp_base)
     test_loader = DataLoader(test_set,
-                             batch_size=args.val_batchsize,
+                             batch_size=args.finetune.batchsize,
                              shuffle=False,
                              collate_fn=collate_fn_lp_base)
 
-    best_val_objgaps = []
-    test_objgaps = []
-
-    for run in range(args.runs):
+    if args.finetune.whole:
+        # finetune the whole model
         model = TripartiteHeteroGNN(conv=args.conv,
                                     hid_dim=args.hidden,
                                     num_encode_layers=args.num_encode_layers,
                                     num_conv_layers=args.num_conv_layers,
                                     num_pred_layers=args.num_pred_layers,
                                     num_mlp_layers=args.num_mlp_layers,
+                                    backbone_pred_layers=args.backbone_pred_layers,
                                     norm=args.norm).to(device)
+        model.encoder.load_state_dict(pretrained_state_dict)
+        best_model = copy.deepcopy(model.state_dict())
+        trainer = PlainGNNTrainer(args.losstype)
+    else:
+        model = TripartiteHeteroBackbone(
+            conv=args.conv,
+            hid_dim=args.hidden,
+            num_encode_layers=args.num_encode_layers,
+            num_conv_layers=args.num_conv_layers,
+            num_mlp_layers=args.num_mlp_layers,
+            backbone_pred_layers=args.backbone_pred_layers,
+            norm=args.norm).to(device)
+        model.load_state_dict(pretrained_state_dict)
+        def get_feat_label(loader):
+            model.eval()
+            features = []
+            labels = []
+            with torch.no_grad():
+                for data in loader:
+                    data = data.to(device)
+                    obj_pred = model(data)
+                    label = data.obj_solution
+                    features.append(obj_pred)
+                    labels.append(label)
+            features = torch.cat(features, dim=0)
+            labels = torch.cat(labels, dim=0)
+            return TensorDataset(features, labels)
 
-        model.encoder.load_state_dict(torch.load(args.modelpath, map_location=device))
+        train_ds = get_feat_label(train_loader)
+        val_ds = get_feat_label(val_loader)
+        test_ds = get_feat_label(test_loader)
 
+        train_loader = DataLoader(train_ds, batch_size=args.finetune.batchsize, shuffle=True)
+        val_loader = DataLoader(val_ds, batch_size=args.finetune.batchsize, shuffle=False)
+        test_loader = DataLoader(test_ds, batch_size=args.finetune.batchsize, shuffle=False)
+
+        model = MLP([args.hidden] * args.finetune.num_mlp_layers + [1], norm=None).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
-        if args.train_whole:
-            optimizer = optim.Adam([{'params': model.encoder.parameters(), 'lr': 1.e-5},
-                                    {'params': model.predictor.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
+        trainer = LinearTrainer(args.losstype)
+
+    optimizer = optim.Adam(model.parameters(), lr=args.finetune.lr, weight_decay=args.finetune.weight_decay)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+                                                     mode='min',
+                                                     factor=0.5,
+                                                     patience=50,
+                                                     min_lr=1.e-5)
+
+    pbar = tqdm(range(args.finetune.epoch))
+    for epoch in pbar:
+        train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+        val_obj_gap = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+
+        if scheduler is not None:
+            scheduler.step(val_obj_gap)
+
+        if trainer.best_objgap > val_obj_gap:
+            trainer.patience = 0
+            trainer.best_objgap = val_obj_gap
+            best_model = copy.deepcopy(model.state_dict())
+            if args.ckpt:
+                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
         else:
-            optimizer = optim.Adam(model.predictor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                         mode='min',
-                                                         factor=0.5,
-                                                         patience=50 // args.eval_every,
-                                                         min_lr=1.e-5)
+            trainer.patience += 1
 
-        trainer = PlainGNNTrainer(args.losstype)
+        if trainer.patience > args.finetune.patience:
+            break
 
-        pbar = tqdm(range(args.epoch))
-        for epoch in pbar:
-            train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
-            stats_dict = {'train_loss': train_loss,
-                          'lr': scheduler.optimizer.param_groups[0]["lr"]}
-            if epoch % args.eval_every == 0:
-                val_obj_gap = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+        stats_dict = {'train_loss': train_loss,
+                      'val_obj_gap': val_obj_gap,
+                      'lr': scheduler.optimizer.param_groups[0]["lr"]}
 
-                if scheduler is not None:
-                    scheduler.step(val_obj_gap)
+        pbar.set_postfix(stats_dict)
+        wandb.log(stats_dict)
 
-                if trainer.best_objgap > val_obj_gap:
-                    trainer.patience = 0
-                    trainer.best_objgap = val_obj_gap
-                    best_model = copy.deepcopy(model.state_dict())
-                    if args.ckpt:
-                        torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run}.pt'))
-                else:
-                    trainer.patience += 1
+    model.load_state_dict(best_model)
+    test_obj_gap = trainer.eval(test_loader, model)
+    return best_model, trainer.best_objgap, test_obj_gap
 
-                if trainer.patience > (args.patience // args.eval_every + 1):
-                    break
 
-                stats_dict['val_obj_gap'] = val_obj_gap
+@hydra.main(version_base=None, config_path='./config', config_name="pre_fine")
+def main(args: DictConfig):
+    log_folder_name = save_run_config(args)
 
-            pbar.set_postfix(stats_dict)
-            wandb.log(stats_dict)
-        best_val_objgaps.append(trainer.best_objgap)
+    wandb.init(project=args.wandb.project,
+               name=args.wandb.name if args.wandb.name else None,
+               mode="online" if args.wandb.enable else "disabled",
+               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
+               entity="chendiqian")  # use your own entity
 
-        model.load_state_dict(best_model)
-        test_obj_gap = trainer.eval(test_loader, model)
-        test_objgaps.append(test_obj_gap)
-        wandb.log({'test_obj_gap': test_obj_gap})
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    best_val_objgaps = []
+    test_objgaps = []
+
+    for run in range(args.runs):
+        assert args.finetune.modelpath is not None
+        state_dict = torch.load(args.finetune.modelpath, map_location=device)
+        best_model, val_obj, test_obj = finetune(args, log_folder_name, run, state_dict)
+
+        best_val_objgaps.append(val_obj)
+        test_objgaps.append(test_obj)
+
+        wandb.log({'test_obj_gap': test_obj})
 
     wandb.log({
         'best_val_obj_gap': np.mean(best_val_objgaps),
