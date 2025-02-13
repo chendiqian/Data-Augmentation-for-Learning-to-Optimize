@@ -9,14 +9,14 @@ runs: 1
 losstype: l1
 ckpt: true
 
-conv: gcnconv
-hidden: 128
-num_encode_layers: 2
-num_conv_layers: 8
-num_pred_layers: 1
-num_mlp_layers: 1
-backbone_pred_layers: 2
-norm: graphnorm
+backbone:
+  conv: gcnconv
+  hidden: 128
+  num_encode_layers: 2
+  num_conv_layers: 8
+  num_mlp_layers: 1
+  num_pred_layers: 2
+  norm: graphnorm
 
 finetune:
   lr: 1.e-3
@@ -27,7 +27,7 @@ finetune:
   train_frac: 0.01
   modelpath: null
   whole: true
-  num_mlp_layers: 1  # only when not tune the whole model
+  num_pred_layers: 1
 
 pretrain:
   lr: 1.e-3

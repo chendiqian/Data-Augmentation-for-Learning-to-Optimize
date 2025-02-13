@@ -22,11 +22,12 @@ from data.utils import save_run_config
 
 
 def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pretrained_state_dict=None):
-    train_set = LPDataset(args.datapath, 'train', transform=GCNNorm() if 'gcn' in args.conv else None)
+    transform = GCNNorm() if 'gcn' in args.backbone.conv else None
+    train_set = LPDataset(args.datapath, 'train', transform=transform)
     if args.finetune.train_frac < 1:
         train_set = train_set[:int(len(train_set) * args.finetune.train_frac)]
-    valid_set = LPDataset(args.datapath, 'valid', transform=GCNNorm() if 'gcn' in args.conv else None)
-    test_set = LPDataset(args.datapath, 'test', transform=GCNNorm() if 'gcn' in args.conv else None)
+    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
+    test_set = LPDataset(args.datapath, 'test', transform=transform)
     if args.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
@@ -48,26 +49,26 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 
     if args.finetune.whole:
         # finetune the whole model
-        model = TripartiteHeteroGNN(conv=args.conv,
-                                    hid_dim=args.hidden,
-                                    num_encode_layers=args.num_encode_layers,
-                                    num_conv_layers=args.num_conv_layers,
-                                    num_pred_layers=args.num_pred_layers,
-                                    num_mlp_layers=args.num_mlp_layers,
-                                    backbone_pred_layers=args.backbone_pred_layers,
-                                    norm=args.norm).to(device)
+        model = TripartiteHeteroGNN(conv=args.backbone.conv,
+                                    hid_dim=args.backbone.hidden,
+                                    num_encode_layers=args.backbone.num_encode_layers,
+                                    num_conv_layers=args.backbone.num_conv_layers,
+                                    num_pred_layers=args.finetune.num_pred_layers,
+                                    num_mlp_layers=args.backbone.num_mlp_layers,
+                                    backbone_pred_layers=args.backbone.num_pred_layers,
+                                    norm=args.backbone.norm).to(device)
         model.encoder.load_state_dict(pretrained_state_dict)
         best_model = copy.deepcopy(model.state_dict())
         trainer = PlainGNNTrainer(args.losstype)
     else:
         model = TripartiteHeteroBackbone(
-            conv=args.conv,
-            hid_dim=args.hidden,
-            num_encode_layers=args.num_encode_layers,
-            num_conv_layers=args.num_conv_layers,
-            num_mlp_layers=args.num_mlp_layers,
-            backbone_pred_layers=args.backbone_pred_layers,
-            norm=args.norm).to(device)
+            conv=args.backbone.conv,
+            hid_dim=args.backbone.hidden,
+            num_encode_layers=args.backbone.num_encode_layers,
+            num_conv_layers=args.backbone.num_conv_layers,
+            num_mlp_layers=args.backbone.num_mlp_layers,
+            backbone_pred_layers=args.backbone.num_pred_layers,
+            norm=args.backbone.norm).to(device)
         model.load_state_dict(pretrained_state_dict)
         def get_feat_label(loader):
             model.eval()
@@ -92,7 +93,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         val_loader = DataLoader(val_ds, batch_size=args.finetune.batchsize, shuffle=False)
         test_loader = DataLoader(test_ds, batch_size=args.finetune.batchsize, shuffle=False)
 
-        model = MLP([args.hidden] * args.finetune.num_mlp_layers + [1], norm=None).to(device)
+        model = MLP([args.backbone.hidden] * args.finetune.num_pred_layers + [1], norm=None).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
         trainer = LinearTrainer(args.losstype)

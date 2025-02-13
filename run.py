@@ -29,11 +29,12 @@ def main(args: DictConfig):
                config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
                entity="chendiqian")  # use your own entity
 
-    train_set = LPDataset(args.datapath, 'train', transform=GCNNorm() if 'gcn' in args.conv else None)
+    transform = GCNNorm() if 'gcn' in args.backbone.conv else None
+    train_set = LPDataset(args.datapath, 'train', transform=transform)
     if args.train_frac < 1:
         train_set = train_set[:int(len(train_set) * args.train_frac)]
-    valid_set = LPDataset(args.datapath, 'valid', transform=GCNNorm() if 'gcn' in args.conv else None)
-    test_set = LPDataset(args.datapath, 'test', transform=GCNNorm() if 'gcn' in args.conv else None)
+    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
+    test_set = LPDataset(args.datapath, 'test', transform=transform)
     if args.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
@@ -57,14 +58,14 @@ def main(args: DictConfig):
     test_objgaps = []
 
     for run in range(args.runs):
-        model = TripartiteHeteroGNN(conv=args.conv,
-                                    hid_dim=args.hidden,
-                                    num_encode_layers=args.num_encode_layers,
-                                    num_conv_layers=args.num_conv_layers,
+        model = TripartiteHeteroGNN(conv=args.backbone.conv,
+                                    hid_dim=args.backbone.hidden,
+                                    num_encode_layers=args.backbone.num_encode_layers,
+                                    num_conv_layers=args.backbone.num_conv_layers,
                                     num_pred_layers=args.num_pred_layers,
-                                    num_mlp_layers=args.num_mlp_layers,
-                                    backbone_pred_layers=args.backbone_pred_layers,
-                                    norm=args.norm).to(device)
+                                    num_mlp_layers=args.backbone.num_mlp_layers,
+                                    backbone_pred_layers=args.backbone.num_pred_layers,
+                                    norm=args.backbone.norm).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

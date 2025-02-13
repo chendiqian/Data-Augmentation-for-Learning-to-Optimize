@@ -25,7 +25,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                 RandomDropNode(args.pretrain.drop_rate),
                 ]
     transform = [AugmentWrapper(aug_list)]
-    if 'gcn' in args.conv:
+    if 'gcn' in args.backbone.conv:
         transform.append(GCNNorm())
     transform = Compose(transform)
     train_set = LPDataset(args.datapath, 'train', transform=transform)
@@ -45,14 +45,14 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                             collate_fn=collate_pos_pair)
 
     model = TripartiteHeteroPretrainGNN(
-        conv=args.conv,
-        hid_dim=args.hidden,
-        num_encode_layers=args.num_encode_layers,
-        num_conv_layers=args.num_conv_layers,
+        conv=args.backbone.conv,
+        hid_dim=args.backbone.hidden,
+        num_encode_layers=args.backbone.num_encode_layers,
+        num_conv_layers=args.backbone.num_conv_layers,
         num_pred_layers=args.pretrain.num_pred_layers,
-        num_mlp_layers=args.num_mlp_layers,
-        backbone_pred_layers=args.backbone_pred_layers,
-        norm=args.norm).to(device)
+        num_mlp_layers=args.backbone.num_mlp_layers,
+        backbone_pred_layers=args.backbone.num_pred_layers,
+        norm=args.backbone.norm).to(device)
     best_model = copy.deepcopy(model.encoder.state_dict())
 
     optimizer = optim.Adam(model.parameters(), lr=args.pretrain.lr, weight_decay=args.pretrain.weight_decay)
