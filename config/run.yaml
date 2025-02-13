@@ -19,6 +19,7 @@ conv: gcnconv
 hidden: 128
 num_encode_layers: 2
 num_conv_layers: 8
-num_pred_layers: 2
+num_pred_layers: 1
 num_mlp_layers: 1
+backbone_pred_layers: 2
 norm: graphnorm

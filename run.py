@@ -63,6 +63,7 @@ def main(args: DictConfig):
                                     num_conv_layers=args.num_conv_layers,
                                     num_pred_layers=args.num_pred_layers,
                                     num_mlp_layers=args.num_mlp_layers,
+                                    backbone_pred_layers=args.backbone_pred_layers,
                                     norm=args.norm).to(device)
         best_model = copy.deepcopy(model.state_dict())
 

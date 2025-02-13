@@ -7,26 +7,14 @@ from torch_geometric.typing import EdgeType, NodeType
 from models.hetero_conv import TripartiteConv
 from models.convs.gcn2conv import GCN2Conv
 from models.convs.gcnconv import GCNConv
-from models.convs.genconv import GENConv
 from models.convs.ginconv import GINEConv
-from models.nn_utils import LogEncoder
 
 
 def get_conv_layer(conv: str,
                    hid_dim: int,
                    num_mlp_layers: int,
                    norm: str):
-    if conv.lower() == 'genconv':
-        return GENConv(in_channels=-1,
-                       out_channels=hid_dim,
-                       num_layers=num_mlp_layers,
-                       aggr='softmax',
-                       msg_norm=norm is not None,
-                       learn_msg_scale=norm is not None,
-                       norm=norm,
-                       bias=True,
-                       edge_dim=1)
-    elif conv.lower() == 'gcnconv':
+    if conv.lower() == 'gcnconv':
         return GCNConv(edge_dim=1,
                        hid_dim=hid_dim,
                        num_mlp_layers=num_mlp_layers,
@@ -45,14 +33,14 @@ def get_conv_layer(conv: str,
         raise NotImplementedError
 
 
-class TripartiteHeteroEncoder(torch.nn.Module):
+class TripartiteHeteroBackbone(torch.nn.Module):
     def __init__(self,
                  conv,
                  hid_dim,
                  num_encode_layers,
                  num_conv_layers,
                  num_mlp_layers,
-                 num_pred_layers,
+                 backbone_pred_layers,
                  norm):
         super().__init__()
 
@@ -74,7 +62,10 @@ class TripartiteHeteroEncoder(torch.nn.Module):
 
         # self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
         # self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
-        self.fc_obj = MLP([hid_dim] * num_pred_layers, norm=None)
+        if backbone_pred_layers == 0:
+            self.fc_obj = torch.nn.Identity()
+        else:
+            self.fc_obj = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
 
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict

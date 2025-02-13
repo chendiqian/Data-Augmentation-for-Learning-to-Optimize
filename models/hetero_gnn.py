@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.nn import MLP, Linear
 
-from models.hetero_encoder import TripartiteHeteroEncoder
+from models.hetero_backbone import TripartiteHeteroBackbone
 
 
 class TripartiteHeteroGNN(torch.nn.Module):
@@ -12,20 +12,21 @@ class TripartiteHeteroGNN(torch.nn.Module):
                  num_conv_layers,
                  num_pred_layers,
                  num_mlp_layers,
+                 backbone_pred_layers,
                  norm):
         super().__init__()
 
-        self.encoder = TripartiteHeteroEncoder(
+        self.encoder = TripartiteHeteroBackbone(
             conv,
             hid_dim,
             num_encode_layers,
             num_conv_layers,
             num_mlp_layers,
-            num_pred_layers,
+            backbone_pred_layers,
             norm
         )
 
-        self.predictor = Linear(hid_dim, 1)
+        self.predictor = MLP([hid_dim] * num_pred_layers + [1], norm=None)
 
     def forward(self, data):
         obj_pred = self.encoder(data)
