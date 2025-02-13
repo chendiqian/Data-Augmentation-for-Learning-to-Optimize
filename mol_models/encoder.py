@@ -57,7 +57,7 @@ class Encoder(torch.nn.Module):
                  hid_dim,
                  num_conv_layers,
                  num_mlp_layers,
-                 num_pred_layers,
+                 num_backbone_mlp,
                  norm):
         super().__init__()
 
@@ -69,7 +69,10 @@ class Encoder(torch.nn.Module):
         for layer in range(num_conv_layers):
             self.gcns.append(get_conv_layer(conv, hid_dim, num_mlp_layers, norm))
 
-        self.fc_obj = MLP([hid_dim] * num_pred_layers, norm=None)
+        if num_backbone_mlp > 0:
+            self.fc_obj = MLP([hid_dim] * (num_backbone_mlp + 1), norm=None)
+        else:
+            self.fc_obj = torch.nn.Identity()
 
     def forward(self, data):
         x = self.atom_encoder(data.x)

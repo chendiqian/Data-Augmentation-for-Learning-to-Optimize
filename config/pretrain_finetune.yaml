@@ -11,10 +11,10 @@ ckpt: true
 conv: ginconv
 hidden: 192
 num_conv_layers: 5
-num_pred_layers: 2
+num_pred_layers: 1
 num_mlp_layers: 1
+num_backbone_mlp: 2
 norm: graphnorm
-# todo: tune a mlp
 
 finetune:
   lr: 1.e-3
@@ -36,3 +36,4 @@ pretrain:
   subset: True
   drop_rate: 0.1
   temperature: 0.1
+  num_pred_layers: 0  # no projector
