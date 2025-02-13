@@ -19,7 +19,7 @@ from data.transforms import (GCNNorm,
                              IdentityAugmentation,
                              AugmentWrapper)
 from data.utils import save_run_config
-from mol_models.encoder import Encoder
+from mol_models.gnn import PretrainGNN
 from trainer import NTXentPretrainer
 
 
@@ -49,13 +49,15 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                                batch_size=args.pretrain.batchsize,
                                shuffle=False)
 
-    model = Encoder(conv=args.conv,
-                    hid_dim=args.hidden,
-                    num_conv_layers=args.num_conv_layers,
-                    num_pred_layers=args.num_pred_layers,
-                    num_mlp_layers=args.num_mlp_layers,
-                    norm=args.norm).to(device)
-    best_model = copy.deepcopy(model.state_dict())
+    model = PretrainGNN(
+        conv=args.conv,
+        hid_dim=args.hidden,
+        num_conv_layers=args.num_conv_layers,
+        num_pred_layers=args.pretrain.num_pred_layers,
+        num_backbone_mlp=args.num_backbone_mlp,
+        num_mlp_layers=args.num_mlp_layers,
+        norm=args.norm).to(device)
+    best_model = copy.deepcopy(model.encoder.state_dict())
 
     optimizer = optim.Adam(model.parameters(), lr=args.pretrain.lr, weight_decay=args.pretrain.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -77,7 +79,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         if trainer.best_val_acc < val_acc:
             trainer.patience = 0
             trainer.best_val_acc = val_acc
-            best_model = copy.deepcopy(model.state_dict())
+            best_model = copy.deepcopy(model.encoder.state_dict())
             if args.ckpt:
                 torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
         else:

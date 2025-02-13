@@ -54,6 +54,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
                          hid_dim=args.hidden,
                          num_conv_layers=args.num_conv_layers,
                          num_pred_layers=args.num_pred_layers,
+                         num_backbone_mlp=args.num_backbone_mlp,
                          num_mlp_layers=args.num_mlp_layers,
                          norm=args.norm).to(device)
         if pretrained_state_dict is not None:
@@ -69,8 +70,8 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         model = Encoder(conv=args.conv,
                         hid_dim=args.hidden,
                         num_conv_layers=args.num_conv_layers,
-                        num_pred_layers=args.num_pred_layers,
                         num_mlp_layers=args.num_mlp_layers,
+                        num_backbone_mlp=args.num_backbone_mlp,
                         norm=args.norm).to(device)
         if pretrained_state_dict is not None:
             model.load_state_dict(pretrained_state_dict)
