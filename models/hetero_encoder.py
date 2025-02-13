@@ -5,7 +5,6 @@ from torch_geometric.nn import MLP
 from torch_geometric.typing import EdgeType, NodeType
 
 from models.hetero_conv import TripartiteConv
-from models.convs.gatconv import GATv2Conv
 from models.convs.gcn2conv import GCN2Conv
 from models.convs.gcnconv import GCNConv
 from models.convs.genconv import GENConv
@@ -16,9 +15,7 @@ from models.nn_utils import LogEncoder
 def get_conv_layer(conv: str,
                    hid_dim: int,
                    num_mlp_layers: int,
-                   norm: str,
-                   head: int,
-                   concat: bool):
+                   norm: str):
     if conv.lower() == 'genconv':
         return GENConv(in_channels=-1,
                        out_channels=hid_dim,
@@ -44,13 +41,6 @@ def get_conv_layer(conv: str,
                         hid_dim=hid_dim,
                         num_mlp_layers=num_mlp_layers,
                         norm=norm)
-    elif conv.lower() == 'gatconv':
-        return GATv2Conv(edge_dim=1,
-                         hid_dim=hid_dim,
-                         num_mlp_layers=num_mlp_layers,
-                         norm=norm,
-                         heads=head,
-                         concat=concat)
     else:
         raise NotImplementedError
 
@@ -58,8 +48,6 @@ def get_conv_layer(conv: str,
 class TripartiteHeteroEncoder(torch.nn.Module):
     def __init__(self,
                  conv,
-                 head,
-                 concat,
                  hid_dim,
                  num_encode_layers,
                  num_conv_layers,
@@ -75,13 +63,13 @@ class TripartiteHeteroEncoder(torch.nn.Module):
         self.gcns = torch.nn.ModuleList()
         for layer in range(num_conv_layers):
             self.gcns.append(TripartiteConv(
-                v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
-                c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
+                v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
                 # 1 node only so no normalization
-                v2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None, head, concat),
-                o2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
-                c2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None, head, concat),
-                o2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm, head, concat),
+                v2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None),
+                o2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                c2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None),
+                o2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
             ))
 
         # self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)

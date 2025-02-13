@@ -51,8 +51,6 @@ def main(args: DictConfig):
 
     for run in range(args.runs):
         model = TripartiteHeteroEncoder(conv=args.conv,
-                                        head=args.gat.heads,
-                                        concat=args.gat.concat,
                                         hid_dim=args.hidden,
                                         num_encode_layers=args.num_encode_layers,
                                         num_conv_layers=args.num_conv_layers,

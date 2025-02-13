@@ -7,8 +7,6 @@ from models.hetero_encoder import TripartiteHeteroEncoder
 class TripartiteHeteroPretrainGNN(torch.nn.Module):
     def __init__(self,
                  conv,
-                 head,
-                 concat,
                  hid_dim,
                  num_encode_layers,
                  num_conv_layers,
@@ -19,8 +17,6 @@ class TripartiteHeteroPretrainGNN(torch.nn.Module):
 
         self.encoder = TripartiteHeteroEncoder(
             conv,
-            head,
-            concat,
             hid_dim,
             num_encode_layers,
             num_conv_layers,

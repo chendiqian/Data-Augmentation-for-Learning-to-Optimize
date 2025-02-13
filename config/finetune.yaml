@@ -20,9 +20,6 @@ train_frac: 0.01
 
 eval_every: 1
 conv: gcnconv
-gat:
-  heads: 1
-  concat: false
 hidden: 128
 num_encode_layers: 2
 num_conv_layers: 8
