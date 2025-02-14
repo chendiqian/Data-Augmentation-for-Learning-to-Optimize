@@ -1,6 +1,7 @@
 from typing import Tuple, List
 from random import choices, choice
 
+import numpy as np
 import torch
 from torch_geometric.data import HeteroData
 from torch_geometric.transforms import BaseTransform
@@ -92,6 +93,67 @@ class RandomDropNode(BaseTransform):
                            'edge_attr': o2c_edge_attr},
             q=data.q[vals_node_mask],
             b=data.b[cons_node_mask],
+        )
+        return new_data
+
+
+class DropInactiveConstraint(BaseTransform):
+    """
+    Drop likely inactive constraints
+    """
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def forward(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        active_sort_idx = data.active_sort_idx.numpy()
+        z = np.arange(m) - m // 2
+        prob = 1 / (1 + np.exp(-z))
+        prob /= prob.sum()
+        dropped_cons = np.random.choice(active_sort_idx, size=int(m * self.p), replace=False, p=prob)
+        remain_cons = ~np.in1d(np.arange(m), dropped_cons)
+        remain_cons = torch.from_numpy(remain_cons)
+
+        # modify cons 2 vals edge_index
+        c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
+            subset=(remain_cons, torch.ones(n, dtype=torch.bool)),
+            edge_index=data[('cons', 'to', 'vals')].edge_index,
+            edge_attr=data[('cons', 'to', 'vals')].edge_attr,
+            relabel_nodes=True,
+            size=(m, n),
+            return_edge_mask=False)
+
+        # modify obj 2 cons edge_index
+        o2c_edge_index, o2c_edge_attr = bipartite_subgraph(
+            subset=(torch.ones(1).bool(), remain_cons),
+            edge_index=data[('obj', 'to', 'cons')].edge_index,
+            edge_attr=data[('obj', 'to', 'cons')].edge_attr,
+            relabel_nodes=True,
+            size=(1, m),
+            return_edge_mask=False)
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': remain_cons.sum(),
+                'x': data['cons'].x[remain_cons],
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
+            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+            obj__to__cons={'edge_index': o2c_edge_index,
+                           'edge_attr': o2c_edge_attr},
+            q=data.q,
+            b=data.b[remain_cons],
         )
         return new_data
 
