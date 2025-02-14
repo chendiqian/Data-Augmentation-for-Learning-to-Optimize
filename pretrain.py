@@ -13,7 +13,7 @@ from tqdm import tqdm
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, RandomDropNode, AugmentWrapper
+from data.transforms import GCNNorm, RandomDropNode, AugmentWrapper, DropInactiveConstraint
 from data.utils import save_run_config
 from models.hetero_gnn import TripartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer
@@ -22,8 +22,9 @@ from trainer import NTXentPretrainer
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # drop node first, then normalize degree
     aug_list = [
-                RandomDropNode(args.pretrain.drop_rate),
-                ]
+        # RandomDropNode(args.pretrain.drop_rate),
+        DropInactiveConstraint(args.pretrain.drop_rate)
+    ]
     transform = [AugmentWrapper(aug_list)]
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNorm())
