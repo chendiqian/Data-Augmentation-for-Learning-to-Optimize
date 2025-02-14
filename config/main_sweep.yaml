@@ -10,6 +10,7 @@ metric:
 parameters:
   wandb.enable:
     value: true
+
   debug:
     value: false
   datapath:
@@ -20,8 +21,9 @@ parameters:
     value: l2
   ckpt:
     value: false
+
   lr:
-    value: 1.e-3
+    values: [1.e-4, 1.e-3]
   weight_decay:
     value: 0.
   epoch:
@@ -29,26 +31,27 @@ parameters:
   patience:
     value: 100
   batchsize:
-    value: 128
+    values: [128, 256, 512]
   train_frac:
     value: 1.
 
-  conv:
+  backbone.conv:
     value: gcnconv
-  hidden:
-    values: [64, 96, 128, 160, 192, 256]
-  num_encode_layers:
+  backbone.hidden:
+    value: 128
+  backbone.num_encode_layers:
+    values: [1, 2, 3]
+  backbone.num_conv_layers:
+    values: [2, 3, 4]
+  backbone.num_pred_layers:
     values: [2, 3]
-  num_conv_layers:
-    values: [3, 4, 5, 6, 7, 8]
+  backbone.num_mlp_layers:
+    value: 1  # for mlp in conv
+  backbone.norm:
+    value: graphnorm
+
   num_pred_layers:
     value: 1
-  backbone_pred_layers:
-    values: [2, 3]
-  num_mlp_layers:
-    value: 1  # for mlp in conv
-  norm:
-    value: graphnorm
 
 command:
   - ${env}

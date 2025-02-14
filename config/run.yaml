@@ -7,7 +7,7 @@ debug: false
 datapath: /work/log1/chendi.qian/qp_400_new
 runs: 1
 losstype: l2
-ckpt: true
+ckpt: false
 lr: 1.e-3
 weight_decay: 0.
 epoch: 1000
@@ -18,8 +18,8 @@ train_frac: 1.
 backbone:
   conv: gcnconv
   hidden: 128
-  num_encode_layers: 2
-  num_conv_layers: 8
+  num_encode_layers: 3
+  num_conv_layers: 3
   num_mlp_layers: 1
   num_pred_layers: 2
   norm: graphnorm

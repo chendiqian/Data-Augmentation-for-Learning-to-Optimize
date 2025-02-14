@@ -6,14 +6,14 @@ wandb:
 debug: false
 datapath: /work/log1/chendi.qian/ssl/gen_50_100_0.1
 runs: 1
-losstype: l1
-ckpt: true
+losstype: l2
+ckpt: false
 
 backbone:
   conv: gcnconv
   hidden: 128
-  num_encode_layers: 2
-  num_conv_layers: 8
+  num_encode_layers: 3
+  num_conv_layers: 3
   num_mlp_layers: 1
   num_pred_layers: 2
   norm: graphnorm
@@ -35,6 +35,6 @@ pretrain:
   epoch: 200
   patience: 50
   batchsize: 256
-  drop_rate: 0.1
+  drop_rate: 0.2
   temperature: 0.1
   num_pred_layers: 0  # no projector
