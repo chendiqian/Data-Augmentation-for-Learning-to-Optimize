@@ -2,6 +2,7 @@ from typing import Tuple, List
 from random import choices, choice
 
 import numpy as np
+import scipy.sparse as sp
 import torch
 from torch_geometric.data import HeteroData
 from torch_geometric.transforms import BaseTransform
@@ -36,6 +37,7 @@ class RandomDropNode(BaseTransform):
     Trivially drop variable and constraint nodes.
     This will violate the original LP problem.
     """
+
     def __init__(self, p):
         assert 0 < p < 1
         self.p = p
@@ -101,6 +103,7 @@ class DropInactiveConstraint(BaseTransform):
     """
     Drop likely inactive constraints
     """
+
     def __init__(self, p):
         assert 0 < p < 1
         self.p = p
@@ -158,10 +161,71 @@ class DropInactiveConstraint(BaseTransform):
         return new_data
 
 
+class AddRedundantConstraint(BaseTransform):
+    """
+    Add more constraints PAx <= Pb + eps.
+    """
+
+    def __init__(self, p, affinity=3):
+        assert 0 < p < 1
+        self.p = p
+        self.affinity = affinity
+
+    def forward(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        num_new_cons = int(m * self.p)
+        rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
+        edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+        A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
+                          (edge_index[0], edge_index[1])), shape=(m, n))
+        A_new = (rand_mat @ A).tocoo()
+        new_edge_index = np.vstack([A_new.row, A_new.col])
+        new_edge_attr = A_new.data
+        new_edge_index[0] += m
+
+        extra_b = rand_mat @ data.b.numpy()
+        extra_b += np.random.rand(extra_b.shape[0])
+        new_b = torch.cat([data.b, torch.from_numpy(extra_b).float()], dim=0)
+
+        c2v_edge_index = torch.cat([data[('cons', 'to', 'vals')].edge_index,
+                                    torch.from_numpy(new_edge_index).long()], dim=1)
+        c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr,
+                                   torch.from_numpy(new_edge_attr[:, None]).float()], dim=0)
+
+        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
+                                       torch.arange(m + num_new_cons)])
+        o2c_edge_attr = new_b[:, None]
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': num_new_cons + m,
+                'x': torch.empty(m + num_new_cons),
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
+            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+            obj__to__cons={'edge_index': o2c_edge_index,
+                           'edge_attr': o2c_edge_attr},
+            q=data.q,
+            b=new_b,
+        )
+        return new_data
+
+
 class AugmentWrapper(BaseTransform):
     """
     Return 2 views of the graph
     """
+
     def __init__(self, transforms: List):
         self.transforms = transforms
 
