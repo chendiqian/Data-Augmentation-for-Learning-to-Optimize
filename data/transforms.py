@@ -240,3 +240,10 @@ class AugmentWrapper(BaseTransform):
         data1 = t1(data)
         data2 = t2(data)
         return data1, data2
+
+
+TRANSFORM_CODEBOOK = {
+    '0': RandomDropNode,
+    '1': DropInactiveConstraint,
+    '2': AddRedundantConstraint,
+}
