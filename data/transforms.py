@@ -4,6 +4,7 @@ from random import choices, choice
 import numpy as np
 import scipy.sparse as sp
 import torch
+from torch_sparse import SparseTensor
 from torch_geometric.data import HeteroData
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import degree, bipartite_subgraph
@@ -221,6 +222,53 @@ class AddRedundantConstraint(BaseTransform):
         return new_data
 
 
+class ScaleInstance(BaseTransform):
+    """
+    eps * Ax <= eps * b does not change
+    eps > 0
+    """
+
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def forward(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+
+        A = SparseTensor(row=data[('cons', 'to', 'vals')].edge_index[0],
+                         col=data[('cons', 'to', 'vals')].edge_index[1],
+                         value=data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
+                         sparse_sizes=(m, n), is_sorted=True, trust_data=True)
+        scales = torch.abs(torch.randn(m))
+        scales[torch.rand(m) > self.p] = 1.
+        A = A * scales[:, None]
+        new_b = data.b * scales
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': m,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': torch.vstack([A.storage.row(), A.storage.col()]),
+                            'edge_attr': A.storage.value()[:, None]},
+            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+            obj__to__cons={'edge_index': data[('obj', 'to', 'cons')].edge_index,
+                           'edge_attr': new_b[:, None]},
+            q=data.q,
+            b=new_b,
+        )
+        return new_data
+
+
 class AugmentWrapper(BaseTransform):
     """
     Return 2 views of the graph
@@ -246,4 +294,5 @@ TRANSFORM_CODEBOOK = {
     '0': RandomDropNode,
     '1': DropInactiveConstraint,
     '2': AddRedundantConstraint,
+    '3': ScaleInstance,
 }
