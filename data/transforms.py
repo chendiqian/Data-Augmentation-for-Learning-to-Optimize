@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 from torch_sparse import SparseTensor
+from torch_scatter import scatter_sum
 from torch_geometric.data import HeteroData
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import degree, bipartite_subgraph
@@ -269,6 +270,81 @@ class ScaleInstance(BaseTransform):
         return new_data
 
 
+class AddOrthogonalConstraint(BaseTransform):
+    """
+    Add constraint ax <= b
+    where a.dot(c) = 0, b is large enough. This would not affect the results.
+    """
+
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def forward(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+
+        def batch_sparse_orthogonal(c, num_new, density=0.1):
+            sparsity = int(n * density)
+
+            row = torch.arange(num_new).repeat_interleave(sparsity)
+            # m * nnz
+            col = np.vstack([np.sort(np.random.choice(n, sparsity, replace=False)) for _ in range(num_new)])
+            col = torch.from_numpy(col).long()
+            free_values = torch.randn(num_new, sparsity - 1)
+            last_values = -(c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1) / c[col[:, -1]]
+            values = torch.cat([free_values, last_values[:, None]], dim=1)
+            values /= values.max(dim=1, keepdim=True).values
+            return row, col.reshape(-1), values.reshape(-1)
+
+        num_new_cons = int(m * self.p)
+        extra_row, extra_col, extra_data = batch_sparse_orthogonal(
+            data.q,
+            num_new_cons,
+            data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n))
+
+        # a heuristic, we need a large enough b so that not to violate current feasible region
+        # ideally we should narrow the bounds of all the variables and get an upper bound of b, but that's hard
+        # if c_i is large, the solution x_i is probably small
+        assert data.q.min() >= 0.
+        extra_b = extra_data * (
+            torch.where(extra_data > 0,
+                        torch.clamp(1. / (data.q + 1.e-7), max=5.)[extra_col],
+                        0)
+        )
+        extra_b = scatter_sum(extra_b, extra_row, dim=0)
+        new_b = torch.cat([data.b, extra_b], dim=0)
+        extra_edge_index = torch.vstack([extra_row + m, extra_col])
+        new_c2v_edge_index = torch.cat([data[('cons', 'to', 'vals')].edge_index, extra_edge_index], dim=1)
+        new_c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr, extra_data[:, None]], dim=0)
+
+        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
+                                       torch.arange(m + num_new_cons)])
+        o2c_edge_attr = new_b[:, None]
+        new_data = data.__class__(
+            cons={
+                'num_nodes': num_new_cons + m,
+                'x': torch.empty(m + num_new_cons),
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': new_c2v_edge_index,
+                            'edge_attr': new_c2v_edge_attr},
+            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+            obj__to__cons={'edge_index': o2c_edge_index,
+                           'edge_attr': o2c_edge_attr},
+            q=data.q,
+            b=new_b,
+        )
+        return new_data
+
+
 class AugmentWrapper(BaseTransform):
     """
     Return 2 views of the graph
@@ -290,9 +366,15 @@ class AugmentWrapper(BaseTransform):
         return data1, data2
 
 
+# Todo: add redundant variables
+
+# Todo: change some existing constraints
+
+
 TRANSFORM_CODEBOOK = {
     '0': RandomDropNode,
     '1': DropInactiveConstraint,
     '2': AddRedundantConstraint,
     '3': ScaleInstance,
+    '4': AddOrthogonalConstraint,
 }
