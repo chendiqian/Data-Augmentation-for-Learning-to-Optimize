@@ -7,17 +7,16 @@ import torch
 from torch_sparse import SparseTensor
 from torch_scatter import scatter_sum
 from torch_geometric.data import HeteroData
-from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import degree, bipartite_subgraph
 
 
-class GCNNorm(BaseTransform):
+class GCNNorm:
     # adapted from
     # https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/transforms/gcn_norm.html#GCNNorm
     def __init__(self):
         pass
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         for src, rel, dst in data.edge_index_dict.keys():
             edge_index = data[(src, rel, dst)].edge_index
             row, col = edge_index
@@ -34,7 +33,7 @@ class GCNNorm(BaseTransform):
         return data
 
 
-class RandomDropNode(BaseTransform):
+class RandomDropNode:
     """
     Trivially drop variable and constraint nodes.
     This will violate the original LP problem.
@@ -44,7 +43,7 @@ class RandomDropNode(BaseTransform):
         assert 0 < p < 1
         self.p = p
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         cons_node_mask = torch.rand(m) > self.p
         vals_node_mask = torch.rand(n) > self.p
@@ -101,7 +100,7 @@ class RandomDropNode(BaseTransform):
         return new_data
 
 
-class DropInactiveConstraint(BaseTransform):
+class DropInactiveConstraint:
     """
     Drop likely inactive constraints
     """
@@ -110,7 +109,7 @@ class DropInactiveConstraint(BaseTransform):
         assert 0 < p < 1
         self.p = p
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         active_sort_idx = data.active_sort_idx.numpy()
         z = np.arange(m) - m // 2
@@ -163,7 +162,7 @@ class DropInactiveConstraint(BaseTransform):
         return new_data
 
 
-class AddRedundantConstraint(BaseTransform):
+class AddRedundantConstraint:
     """
     Add more constraints PAx <= Pb + eps.
     """
@@ -173,7 +172,7 @@ class AddRedundantConstraint(BaseTransform):
         self.p = p
         self.affinity = affinity
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         num_new_cons = int(m * self.p)
         rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
@@ -223,7 +222,7 @@ class AddRedundantConstraint(BaseTransform):
         return new_data
 
 
-class ScaleInstance(BaseTransform):
+class ScaleInstance:
     """
     eps * Ax <= eps * b does not change
     eps > 0
@@ -233,7 +232,7 @@ class ScaleInstance(BaseTransform):
         assert 0 < p < 1
         self.p = p
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
         A = SparseTensor(row=data[('cons', 'to', 'vals')].edge_index[0],
@@ -270,7 +269,7 @@ class ScaleInstance(BaseTransform):
         return new_data
 
 
-class AddOrthogonalConstraint(BaseTransform):
+class AddOrthogonalConstraint:
     """
     Add constraint ax <= b
     where a.dot(c) = 0, b is large enough. This would not affect the results.
@@ -280,7 +279,7 @@ class AddOrthogonalConstraint(BaseTransform):
         assert 0 < p < 1
         self.p = p
 
-    def forward(self, data: HeteroData) -> HeteroData:
+    def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
         def batch_sparse_orthogonal(c, num_new, density=0.1):
@@ -345,7 +344,7 @@ class AddOrthogonalConstraint(BaseTransform):
         return new_data
 
 
-class AugmentWrapper(BaseTransform):
+class AugmentWrapper:
     """
     Return 2 views of the graph
     """
@@ -353,7 +352,7 @@ class AugmentWrapper(BaseTransform):
     def __init__(self, transforms: List):
         self.transforms = transforms
 
-    def forward(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
+    def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
         # while True:
         #     # I don't want 2 identity
         #     t1, t2 = choices(self.transforms, k=2)
