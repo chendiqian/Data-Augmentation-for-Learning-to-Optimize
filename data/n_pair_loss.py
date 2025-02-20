@@ -42,4 +42,4 @@ class NPairLoss(nn.Module):
         logits = torch.cat([positive_logit, negative_logits], dim=1)
         labels = torch.zeros(len(logits), dtype=torch.long, device=query.device)
 
-        return F.cross_entropy(logits / self.temperature, labels, reduction=self.reduction)
+        return F.cross_entropy(logits / self.temperature, labels, reduction=self.reduction), logits

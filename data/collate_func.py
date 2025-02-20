@@ -1,4 +1,5 @@
 from typing import List, Tuple
+import itertools
 
 import torch
 from torch_geometric.data import Data, Batch
@@ -27,3 +28,10 @@ def collate_pos_pair(graphs: List[Tuple[Data, Data]]):
     batch1 = collate_fn_lp_base(graphs1)
     batch2 = collate_fn_lp_base(graphs2)
     return batch1, batch2
+
+
+def collate_pos_neg_pair(lists_graphs: List[List[Data]]):
+    data = [ls.pop(0) for ls in lists_graphs]
+    pos = [ls.pop(0) for ls in lists_graphs]
+    negs = list(itertools.chain(*lists_graphs))
+    return collate_fn_lp_base(data), collate_fn_lp_base(pos), collate_fn_lp_base(negs)

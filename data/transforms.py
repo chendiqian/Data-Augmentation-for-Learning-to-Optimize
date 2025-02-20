@@ -109,6 +109,9 @@ class DropInactiveConstraint:
         assert 0 < p < 1
         self.p = p
 
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
+
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         active_sort_idx = data.active_sort_idx.numpy()
@@ -172,6 +175,66 @@ class AddRedundantConstraint:
         self.p = p
         self.affinity = affinity
 
+    def neg(self, data: HeteroData, negatives: int) -> List[HeteroData]:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        num_new_cons = int(m * self.p)
+        rand_mat = sp.random_array((num_new_cons * negatives, m), density=self.affinity / m, format='csr')
+        rand_mat.data *= -1.  # random_array generates (0, 1)
+        edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+        A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
+                          (edge_index[0], edge_index[1])), shape=(m, n))
+        merged_A_new = rand_mat @ A  # (negatives * new adj) new rows
+        merged_extra_b = rand_mat @ data.b.numpy()
+
+        # this is shared
+        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
+                                       torch.arange(m + num_new_cons)])
+        neg_samples = []
+        for i in range(negatives):
+            row_start = i * num_new_cons
+            row_end = (i + 1) * num_new_cons
+            A_new = merged_A_new[row_start: row_end].tocoo()
+
+            new_edge_index = np.vstack([A_new.row, A_new.col])
+            new_edge_attr = A_new.data
+            new_edge_index[0] += m
+
+            extra_b = merged_extra_b[row_start: row_end]
+            new_b = torch.cat([data.b, torch.from_numpy(extra_b).float()], dim=0)
+
+            c2v_edge_index = torch.cat([data[('cons', 'to', 'vals')].edge_index,
+                                        torch.from_numpy(new_edge_index).long()], dim=1)
+            c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr,
+                                       torch.from_numpy(new_edge_attr[:, None]).float()], dim=0)
+
+            o2c_edge_attr = new_b[:, None]
+
+            new_data = data.__class__(
+                cons={
+                    'num_nodes': num_new_cons + m,
+                    'x': torch.empty(m + num_new_cons),
+                },
+                vals={
+                    'num_nodes': n,
+                    'x': data['vals'].x,
+                },
+                obj={
+                    'num_nodes': 1,
+                    'x': data['obj'].x,
+                },
+                cons__to__vals={'edge_index': c2v_edge_index,
+                                'edge_attr': c2v_edge_attr},
+                obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                               'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
+                obj__to__cons={'edge_index': o2c_edge_index,
+                               'edge_attr': o2c_edge_attr},
+                q=data.q,
+                b=new_b,
+            )
+            neg_samples.append(new_data)
+
+        return neg_samples
+
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         num_new_cons = int(m * self.p)
@@ -232,6 +295,9 @@ class ScaleInstance:
         assert 0 < p < 1
         self.p = p
 
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
+
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
@@ -278,6 +344,9 @@ class AddOrthogonalConstraint:
     def __init__(self, p):
         assert 0 < p < 1
         self.p = p
+
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -363,6 +432,17 @@ class AugmentWrapper:
         data1 = t1(data)
         data2 = t2(data)
         return data1, data2
+
+
+class PosNegAugmentWrapper:
+    def __init__(self, transform, negatives):
+        self.transform = transform
+        self.negatives = negatives
+
+    def __call__(self, data: HeteroData) -> List[HeteroData]:
+        pos = self.transform(data)
+        neg = self.transform.neg(data, self.negatives)
+        return [data, pos] + neg
 
 
 # Todo: add redundant variables
