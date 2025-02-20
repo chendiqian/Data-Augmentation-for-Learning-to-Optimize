@@ -413,7 +413,7 @@ class AddOrthogonalConstraint:
         return new_data
 
 
-class AugmentWrapper:
+class DuoAugmentWrapper:
     """
     Return 2 views of the graph
     """

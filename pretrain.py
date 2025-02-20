@@ -13,7 +13,7 @@ from tqdm import tqdm
 from data.collate_func import collate_pos_pair, collate_pos_neg_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, AugmentWrapper, PosNegAugmentWrapper, TRANSFORM_CODEBOOK
+from data.transforms import GCNNorm, DuoAugmentWrapper, PosNegAugmentWrapper, TRANSFORM_CODEBOOK
 from data.utils import save_run_config
 from models.hetero_gnn import TripartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer, NPairPretrainer
@@ -26,7 +26,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         # we sample from a pool of transforms and create 2 views of pos pairs
         # drop node first, then normalize degree
         aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
-        transform = [AugmentWrapper(aug_list)]
+        transform = [DuoAugmentWrapper(aug_list)]
 
     else:
         # todo: for now, stick to 1 transform, and create 1 pos + N neg samples
