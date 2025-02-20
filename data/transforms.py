@@ -96,6 +96,7 @@ class RandomDropNode:
                            'edge_attr': o2c_edge_attr},
             q=data.q[vals_node_mask],
             b=data.b[cons_node_mask],
+            obj_solution=data.obj_solution,  # this is actually not correct
         )
         return new_data
 
@@ -161,6 +162,7 @@ class DropInactiveConstraint:
                            'edge_attr': o2c_edge_attr},
             q=data.q,
             b=data.b[remain_cons],
+            obj_solution=data.obj_solution,
         )
         return new_data
 
@@ -230,6 +232,7 @@ class AddRedundantConstraint:
                                'edge_attr': o2c_edge_attr},
                 q=data.q,
                 b=new_b,
+                obj_solution=data.obj_solution,
             )
             neg_samples.append(new_data)
 
@@ -281,6 +284,7 @@ class AddRedundantConstraint:
                            'edge_attr': o2c_edge_attr},
             q=data.q,
             b=new_b,
+            obj_solution=data.obj_solution,
         )
         return new_data
 
@@ -331,6 +335,7 @@ class ScaleInstance:
                            'edge_attr': new_b[:, None]},
             q=data.q,
             b=new_b,
+            obj_solution=data.obj_solution,
         )
         return new_data
 
@@ -409,8 +414,23 @@ class AddOrthogonalConstraint:
                            'edge_attr': o2c_edge_attr},
             q=data.q,
             b=new_b,
+            obj_solution=data.obj_solution,
         )
         return new_data
+
+
+class SingleAugmentWrapper:
+    """
+    Return 2 views of the graph
+    """
+
+    def __init__(self, transforms: List):
+        self.transforms = transforms
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        tf = choice(self.transforms)
+        data = tf(data)
+        return data
 
 
 class DuoAugmentWrapper:
