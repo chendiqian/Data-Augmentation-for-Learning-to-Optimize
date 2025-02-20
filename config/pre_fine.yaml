@@ -19,10 +19,10 @@ backbone:
   norm: graphnorm
 
 finetune:
-  lr: 1.e-3
+  lr: 1.e-4
   weight_decay: 0.
   epoch: 1000
-  patience: 100
+  patience: 200
   batchsize: 128
   train_frac: 0.01
   modelpath: null

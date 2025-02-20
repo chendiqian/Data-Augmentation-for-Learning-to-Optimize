@@ -102,7 +102,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                      mode='min',
                                                      factor=0.5,
-                                                     patience=50,
+                                                     patience=100,
                                                      min_lr=1.e-5)
 
     pbar = tqdm(range(args.finetune.epoch))
