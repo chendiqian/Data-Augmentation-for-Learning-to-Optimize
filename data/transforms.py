@@ -101,6 +101,47 @@ class RandomDropNode:
         return new_data
 
 
+class RandomMaskNode:
+    """
+    Trivially mask variable and constraint nodes.
+    This will violate the original LP problem.
+    """
+
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        cons_node_mask = torch.rand(m) < self.p
+        vals_node_mask = torch.rand(n) < self.p
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': m,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            obj={
+                'num_nodes': 1,
+                'x': data['obj'].x,
+            },
+            cons__to__vals={'edge_index': data[('cons', 'to', 'vals')].edge_index,
+                            'edge_attr': data[('cons', 'to', 'vals')].edge_attr},
+            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr.masked_fill(vals_node_mask[:, None], 0)},
+            obj__to__cons={'edge_index': data[('obj', 'to', 'cons')].edge_index,
+                           'edge_attr': data[('obj', 'to', 'cons')].edge_attr.masked_fill(cons_node_mask[:, None], 0)},
+            q=data.q.masked_fill(vals_node_mask, 0),
+            b=data.b.masked_fill(cons_node_mask, 0),
+            obj_solution=data.obj_solution,  # this is actually not correct
+        )
+        return new_data
+
+
 class DropInactiveConstraint:
     """
     Drop likely inactive constraints
@@ -469,6 +510,8 @@ class PosNegAugmentWrapper:
 
 # Todo: change some existing constraints
 
+# Todo: trivial perturb edges
+
 
 TRANSFORM_CODEBOOK = {
     '0': RandomDropNode,
@@ -476,4 +519,5 @@ TRANSFORM_CODEBOOK = {
     '2': AddRedundantConstraint,
     '3': ScaleInstance,
     '4': AddOrthogonalConstraint,
+    '5': RandomMaskNode,
 }
