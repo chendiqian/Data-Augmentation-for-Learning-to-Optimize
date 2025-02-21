@@ -12,7 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
-from data.transforms import GCNNorm
+from augmentation.transform import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
 from models.hetero_gnn import TripartiteHeteroGNN
 from trainer import PlainGNNTrainer

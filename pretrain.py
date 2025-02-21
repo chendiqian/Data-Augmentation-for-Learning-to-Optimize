@@ -13,7 +13,9 @@ from tqdm import tqdm
 from data.collate_func import collate_pos_pair, collate_pos_neg_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from data.transforms import GCNNorm, DuoAugmentWrapper, PosNegAugmentWrapper, TRANSFORM_CODEBOOK
+from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper
+from augmentation import TRANSFORM_CODEBOOK
+from augmentation.transform import GCNNorm
 from data.utils import save_run_config
 from models.hetero_gnn import TripartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer, NPairPretrainer
