@@ -10,7 +10,7 @@ losstype: l2
 ckpt: false
 
 backbone:
-  conv: gcnconv
+  conv: customconv
   hidden: 128
   num_encode_layers: 3
   num_conv_layers: 3

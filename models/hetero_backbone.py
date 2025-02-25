@@ -8,6 +8,7 @@ from models.hetero_conv import TripartiteConv
 from models.convs.gcn2conv import GCN2Conv
 from models.convs.gcnconv import GCNConv
 from models.convs.ginconv import GINEConv
+from models.convs.custom_conv import CustomConv
 
 
 def get_conv_layer(conv: str,
@@ -29,6 +30,8 @@ def get_conv_layer(conv: str,
                         hid_dim=hid_dim,
                         num_mlp_layers=num_mlp_layers,
                         norm=norm)
+    elif conv.lower() == 'customconv':
+        return CustomConv(hid_dim=hid_dim, num_mlp_layers=num_mlp_layers, norm=norm)
     else:
         raise NotImplementedError
 
