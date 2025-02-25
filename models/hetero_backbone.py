@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 
 import torch
-from torch_geometric.nn import MLP
+from torch_geometric.nn import MLP, global_mean_pool
 from torch_geometric.typing import EdgeType, NodeType
 
 from models.hetero_conv import TripartiteConv
@@ -33,7 +33,7 @@ def get_conv_layer(conv: str,
         raise NotImplementedError
 
 
-class TripartiteHeteroBackbone(torch.nn.Module):
+class BipartiteHeteroBackbone(torch.nn.Module):
     def __init__(self,
                  conv,
                  hid_dim,
@@ -52,12 +52,7 @@ class TripartiteHeteroBackbone(torch.nn.Module):
         for layer in range(num_conv_layers):
             self.gcns.append(TripartiteConv(
                 v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
-                c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
-                # 1 node only so no normalization
-                v2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None),
-                o2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
-                c2o_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, None),
-                o2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
             ))
 
         # self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
@@ -78,12 +73,9 @@ class TripartiteHeteroBackbone(torch.nn.Module):
 
         x_dict: Dict[NodeType, torch.FloatTensor] = {
             'vals': vals_embedding,
-            'cons': cons_embedding,
-            # dumb initialization
-            'obj': vals_embedding.new_zeros(data['obj'].num_nodes, vals_embedding.shape[1])}
+            'cons': cons_embedding}
         x0_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding,
-                                                      'cons': cons_embedding,
-                                                      'obj': x_dict['obj']}
+                                                      'cons': cons_embedding}
         return batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict, x0_dict
 
     def forward(self, data):
@@ -94,5 +86,7 @@ class TripartiteHeteroBackbone(torch.nn.Module):
 
         # x_dict['vals'] = self.fc_vals(x_dict['vals'])
         # x_dict['cons'] = self.fc_cons(x_dict['cons'])
-        pred = self.fc_obj(x_dict['obj'])
+        pred = (global_mean_pool(x_dict['vals'], batch_dict['vals'], data.num_graphs) +
+                global_mean_pool(x_dict['cons'], batch_dict['cons'], data.num_graphs))
+        pred = self.fc_obj(pred)
         return pred

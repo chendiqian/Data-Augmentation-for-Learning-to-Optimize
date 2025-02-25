@@ -15,8 +15,8 @@ from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
 from augmentation.transform import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
-from models.hetero_gnn import TripartiteHeteroGNN
-from models.hetero_backbone import TripartiteHeteroBackbone
+from models.hetero_gnn import BipartiteHeteroGNN
+from models.hetero_backbone import BipartiteHeteroBackbone
 from trainer import PlainGNNTrainer, LinearTrainer
 from data.utils import save_run_config
 
@@ -49,19 +49,19 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 
     if args.finetune.whole:
         # finetune the whole model
-        model = TripartiteHeteroGNN(conv=args.backbone.conv,
-                                    hid_dim=args.backbone.hidden,
-                                    num_encode_layers=args.backbone.num_encode_layers,
-                                    num_conv_layers=args.backbone.num_conv_layers,
-                                    num_pred_layers=args.finetune.num_pred_layers,
-                                    num_mlp_layers=args.backbone.num_mlp_layers,
-                                    backbone_pred_layers=args.backbone.num_pred_layers,
-                                    norm=args.backbone.norm).to(device)
+        model = BipartiteHeteroGNN(conv=args.backbone.conv,
+                                   hid_dim=args.backbone.hidden,
+                                   num_encode_layers=args.backbone.num_encode_layers,
+                                   num_conv_layers=args.backbone.num_conv_layers,
+                                   num_pred_layers=args.finetune.num_pred_layers,
+                                   num_mlp_layers=args.backbone.num_mlp_layers,
+                                   backbone_pred_layers=args.backbone.num_pred_layers,
+                                   norm=args.backbone.norm).to(device)
         model.encoder.load_state_dict(pretrained_state_dict)
         best_model = copy.deepcopy(model.state_dict())
         trainer = PlainGNNTrainer(args.losstype)
     else:
-        model = TripartiteHeteroBackbone(
+        model = BipartiteHeteroBackbone(
             conv=args.backbone.conv,
             hid_dim=args.backbone.hidden,
             num_encode_layers=args.backbone.num_encode_layers,

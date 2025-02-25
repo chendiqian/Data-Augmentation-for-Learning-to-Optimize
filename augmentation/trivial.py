@@ -27,24 +27,6 @@ class RandomDropNode:
             size=(m, n),
             return_edge_mask=False)
 
-        # modify obj 2 cons edge_index
-        o2c_edge_index, o2c_edge_attr = bipartite_subgraph(
-            subset=(torch.ones(1).bool(), cons_node_mask.bool()),
-            edge_index=data[('obj', 'to', 'cons')].edge_index,
-            edge_attr=data[('obj', 'to', 'cons')].edge_attr,
-            relabel_nodes=True,
-            size=(1, m),
-            return_edge_mask=False)
-
-        # modify obj 2 vals edge_index
-        o2v_edge_index, o2v_edge_attr = bipartite_subgraph(
-            subset=(torch.ones(1).bool(), vals_node_mask.bool()),
-            edge_index=data[('obj', 'to', 'vals')].edge_index,
-            edge_attr=data[('obj', 'to', 'vals')].edge_attr,
-            relabel_nodes=True,
-            size=(1, n),
-            return_edge_mask=False)
-
         new_data = data.__class__(
             cons={
                 'num_nodes': cons_node_mask.sum(),
@@ -54,16 +36,8 @@ class RandomDropNode:
                 'num_nodes': vals_node_mask.sum(),
                 'x': data['vals'].x[vals_node_mask],
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': c2v_edge_index,
                             'edge_attr': c2v_edge_attr},
-            obj__to__vals={'edge_index': o2v_edge_index,
-                           'edge_attr': o2v_edge_attr},
-            obj__to__cons={'edge_index': o2c_edge_index,
-                           'edge_attr': o2c_edge_attr},
             q=data.q[vals_node_mask],
             b=data.b[cons_node_mask],
             obj_solution=data.obj_solution,  # this is actually not correct
@@ -98,16 +72,8 @@ class RandomDropEdge:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': c2v_edge_index,
                             'edge_attr': c2v_edge_attr},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-            obj__to__cons={'edge_index': data[('obj', 'to', 'cons')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'cons')].edge_attr},
             q=data.q,
             b=data.b,
             obj_solution=data.obj_solution,  # this is actually not correct
@@ -139,16 +105,8 @@ class RandomMaskNode:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': data[('cons', 'to', 'vals')].edge_index,
                             'edge_attr': data[('cons', 'to', 'vals')].edge_attr},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr.masked_fill(vals_node_mask[:, None], 0)},
-            obj__to__cons={'edge_index': data[('obj', 'to', 'cons')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'cons')].edge_attr.masked_fill(cons_node_mask[:, None], 0)},
             q=data.q.masked_fill(vals_node_mask, 0),
             b=data.b.masked_fill(cons_node_mask, 0),
             obj_solution=data.obj_solution,  # this is actually not correct

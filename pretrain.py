@@ -17,7 +17,7 @@ from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper
 from augmentation import TRANSFORM_CODEBOOK
 from augmentation.transform import GCNNorm
 from data.utils import save_run_config
-from models.hetero_gnn import TripartiteHeteroPretrainGNN
+from models.hetero_gnn import BipartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer, NPairPretrainer
 
 
@@ -56,7 +56,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                             shuffle=False,
                             collate_fn=collate_fn)
 
-    model = TripartiteHeteroPretrainGNN(
+    model = BipartiteHeteroPretrainGNN(
         conv=args.backbone.conv,
         hid_dim=args.backbone.hidden,
         num_encode_layers=args.backbone.num_encode_layers,

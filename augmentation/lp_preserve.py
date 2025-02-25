@@ -44,15 +44,6 @@ class DropInactiveConstraint:
             size=(m, n),
             return_edge_mask=False)
 
-        # modify obj 2 cons edge_index
-        o2c_edge_index, o2c_edge_attr = bipartite_subgraph(
-            subset=(torch.ones(1).bool(), remain_cons),
-            edge_index=data[('obj', 'to', 'cons')].edge_index,
-            edge_attr=data[('obj', 'to', 'cons')].edge_attr,
-            relabel_nodes=True,
-            size=(1, m),
-            return_edge_mask=False)
-
         new_data = data.__class__(
             cons={
                 'num_nodes': remain_cons.sum(),
@@ -62,16 +53,8 @@ class DropInactiveConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': c2v_edge_index,
                             'edge_attr': c2v_edge_attr},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-            obj__to__cons={'edge_index': o2c_edge_index,
-                           'edge_attr': o2c_edge_attr},
             q=data.q,
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
@@ -100,9 +83,6 @@ class AddRedundantConstraint:
         merged_A_new = rand_mat @ A  # (negatives * new adj) new rows
         merged_extra_b = rand_mat @ data.b.numpy()
 
-        # this is shared
-        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
-                                       torch.arange(m + num_new_cons)])
         neg_samples = []
         for i in range(negatives):
             row_start = i * num_new_cons
@@ -121,8 +101,6 @@ class AddRedundantConstraint:
             c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr,
                                        torch.from_numpy(new_edge_attr[:, None]).float()], dim=0)
 
-            o2c_edge_attr = new_b[:, None]
-
             new_data = data.__class__(
                 cons={
                     'num_nodes': num_new_cons + m,
@@ -132,16 +110,8 @@ class AddRedundantConstraint:
                     'num_nodes': n,
                     'x': data['vals'].x,
                 },
-                obj={
-                    'num_nodes': 1,
-                    'x': data['obj'].x,
-                },
                 cons__to__vals={'edge_index': c2v_edge_index,
                                 'edge_attr': c2v_edge_attr},
-                obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                               'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-                obj__to__cons={'edge_index': o2c_edge_index,
-                               'edge_attr': o2c_edge_attr},
                 q=data.q,
                 b=new_b,
                 obj_solution=data.obj_solution,
@@ -171,10 +141,6 @@ class AddRedundantConstraint:
         c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr,
                                    torch.from_numpy(new_edge_attr[:, None]).float()], dim=0)
 
-        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
-                                       torch.arange(m + num_new_cons)])
-        o2c_edge_attr = new_b[:, None]
-
         new_data = data.__class__(
             cons={
                 'num_nodes': num_new_cons + m,
@@ -184,16 +150,8 @@ class AddRedundantConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': c2v_edge_index,
                             'edge_attr': c2v_edge_attr},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-            obj__to__cons={'edge_index': o2c_edge_index,
-                           'edge_attr': o2c_edge_attr},
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
@@ -235,16 +193,8 @@ class ScaleInstance:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': torch.vstack([A.storage.row(), A.storage.col()]),
                             'edge_attr': A.storage.value()[:, None]},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-            obj__to__cons={'edge_index': data[('obj', 'to', 'cons')].edge_index,
-                           'edge_attr': new_b[:, None]},
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
@@ -302,9 +252,6 @@ class AddOrthogonalConstraint:
         new_c2v_edge_index = torch.cat([data[('cons', 'to', 'vals')].edge_index, extra_edge_index], dim=1)
         new_c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr, extra_data[:, None]], dim=0)
 
-        o2c_edge_index = torch.vstack([torch.zeros(m + num_new_cons).long(),
-                                       torch.arange(m + num_new_cons)])
-        o2c_edge_attr = new_b[:, None]
         new_data = data.__class__(
             cons={
                 'num_nodes': num_new_cons + m,
@@ -314,16 +261,8 @@ class AddOrthogonalConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            obj={
-                'num_nodes': 1,
-                'x': data['obj'].x,
-            },
             cons__to__vals={'edge_index': new_c2v_edge_index,
                             'edge_attr': new_c2v_edge_attr},
-            obj__to__vals={'edge_index': data[('obj', 'to', 'vals')].edge_index,
-                           'edge_attr': data[('obj', 'to', 'vals')].edge_attr},
-            obj__to__cons={'edge_index': o2c_edge_index,
-                           'edge_attr': o2c_edge_attr},
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,

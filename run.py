@@ -14,7 +14,7 @@ from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
 from augmentation.transform import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
-from models.hetero_gnn import TripartiteHeteroGNN
+from models.hetero_gnn import BipartiteHeteroGNN
 from trainer import PlainGNNTrainer
 from data.utils import save_run_config
 
@@ -58,14 +58,14 @@ def main(args: DictConfig):
     test_objgaps = []
 
     for run in range(args.runs):
-        model = TripartiteHeteroGNN(conv=args.backbone.conv,
-                                    hid_dim=args.backbone.hidden,
-                                    num_encode_layers=args.backbone.num_encode_layers,
-                                    num_conv_layers=args.backbone.num_conv_layers,
-                                    num_pred_layers=args.num_pred_layers,
-                                    num_mlp_layers=args.backbone.num_mlp_layers,
-                                    backbone_pred_layers=args.backbone.num_pred_layers,
-                                    norm=args.backbone.norm).to(device)
+        model = BipartiteHeteroGNN(conv=args.backbone.conv,
+                                   hid_dim=args.backbone.hidden,
+                                   num_encode_layers=args.backbone.num_encode_layers,
+                                   num_conv_layers=args.backbone.num_conv_layers,
+                                   num_pred_layers=args.num_pred_layers,
+                                   num_mlp_layers=args.backbone.num_mlp_layers,
+                                   backbone_pred_layers=args.backbone.num_pred_layers,
+                                   norm=args.backbone.norm).to(device)
         best_model = copy.deepcopy(model.state_dict())
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)

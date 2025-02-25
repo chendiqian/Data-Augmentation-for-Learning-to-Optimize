@@ -12,27 +12,18 @@ class TripartiteConv(torch.nn.Module):
             self,
             v2c_conv: torch.nn.Module,
             c2v_conv: torch.nn.Module,
-            v2o_conv: torch.nn.Module,
-            o2v_conv: torch.nn.Module,
-            c2o_conv: torch.nn.Module,
-            o2c_conv: torch.nn.Module,
             sync_conv: bool = False
     ):
         super().__init__()
 
         self.convs = torch.nn.ModuleDict(
             {'vals_cons': v2c_conv,
-             'cons_vals': c2v_conv,
-             'vals_obj': v2o_conv,
-             'obj_vals': o2v_conv,
-             'cons_obj': c2o_conv,
-             'obj_cons': o2c_conv}
+             'cons_vals': c2v_conv}
         )
         self.has_skip = 'x_0' in inspect.signature(v2c_conv.forward).parameters.keys()
         # we use c -> v -> o setting, so o is the final output
-        self.conv_sequence = [('vals_cons', 'obj_cons'),
-                              ('cons_vals', 'obj_vals'),
-                              ('cons_obj', 'vals_obj'),]
+        self.conv_sequence = [('vals_cons',),
+                              ('cons_vals',),]
         self.sync_conv = sync_conv
 
     def forward(

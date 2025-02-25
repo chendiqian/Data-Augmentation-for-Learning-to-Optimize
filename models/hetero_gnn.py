@@ -1,10 +1,10 @@
 import torch
 from torch_geometric.nn import MLP, Linear
 
-from models.hetero_backbone import TripartiteHeteroBackbone
+from models.hetero_backbone import BipartiteHeteroBackbone
 
 
-class TripartiteHeteroGNN(torch.nn.Module):
+class BipartiteHeteroGNN(torch.nn.Module):
     def __init__(self,
                  conv,
                  hid_dim,
@@ -16,7 +16,7 @@ class TripartiteHeteroGNN(torch.nn.Module):
                  norm):
         super().__init__()
 
-        self.encoder = TripartiteHeteroBackbone(
+        self.encoder = BipartiteHeteroBackbone(
             conv,
             hid_dim,
             num_encode_layers,
@@ -34,7 +34,7 @@ class TripartiteHeteroGNN(torch.nn.Module):
         return x.squeeze()
 
 
-class TripartiteHeteroPretrainGNN(torch.nn.Module):
+class BipartiteHeteroPretrainGNN(torch.nn.Module):
     def __init__(self,
                  conv,
                  hid_dim,
@@ -46,7 +46,7 @@ class TripartiteHeteroPretrainGNN(torch.nn.Module):
                  norm):
         super().__init__()
 
-        self.encoder = TripartiteHeteroBackbone(
+        self.encoder = BipartiteHeteroBackbone(
             conv,
             hid_dim,
             num_encode_layers,
