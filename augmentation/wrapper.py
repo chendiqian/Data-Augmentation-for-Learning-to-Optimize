@@ -48,3 +48,15 @@ class PosNegAugmentWrapper:
         pos = self.transform(data)
         neg = self.transform.neg(data, self.negatives)
         return [data, pos] + neg
+
+
+class ComboAugmentWrapper:
+    def __init__(self, transforms: List):
+        self.transforms = transforms
+
+    def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
+        d1 = d2 = data
+        for tf in self.transforms:
+            d1 = tf(d1)
+            d2 = tf(d2)
+        return d1, d2

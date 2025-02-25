@@ -54,7 +54,7 @@ class BipartiteHeteroPretrainGNN(torch.nn.Module):
             num_mlp_layers,
             backbone_pred_layers,
             norm,
-            erase_c=True,
+            erase_c=False,
         )
 
         if num_pred_layers == 0:

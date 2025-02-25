@@ -123,23 +123,23 @@ class AddRedundantConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         num_new_cons = int(m * self.p)
+        eye_mat = sp.eye_array(m, format='csr')
         rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
+        mat = sp.vstack([eye_mat, rand_mat])
+
         edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
         A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
                           (edge_index[0], edge_index[1])), shape=(m, n))
-        A_new = (rand_mat @ A).tocoo()
-        new_edge_index = np.vstack([A_new.row, A_new.col])
-        new_edge_attr = A_new.data
-        new_edge_index[0] += m
+        A_new = (mat @ A).tocoo()
+        edge_index = torch.from_numpy(np.vstack([A_new.row, A_new.col])).long()
+        edge_attr = torch.from_numpy(A_new.data)[:, None].float()
 
-        extra_b = rand_mat @ data.b.numpy()
-        extra_b += np.random.rand(extra_b.shape[0])
-        new_b = torch.cat([data.b, torch.from_numpy(extra_b).float()], dim=0)
-
-        c2v_edge_index = torch.cat([data[('cons', 'to', 'vals')].edge_index,
-                                    torch.from_numpy(new_edge_index).long()], dim=1)
-        c2v_edge_attr = torch.cat([data[('cons', 'to', 'vals')].edge_attr,
-                                   torch.from_numpy(new_edge_attr[:, None]).float()], dim=0)
+        new_b = mat @ data.b.numpy()
+        bias = np.random.randn(new_b.shape[0])
+        bias[bias < 0] = 0.
+        bias[:m] = 0
+        new_b += bias
+        new_b = torch.from_numpy(new_b).float()
 
         new_data = data.__class__(
             cons={
@@ -150,8 +150,8 @@ class AddRedundantConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            cons__to__vals={'edge_index': c2v_edge_index,
-                            'edge_attr': c2v_edge_attr},
+            cons__to__vals={'edge_index': edge_index,
+                            'edge_attr': edge_attr},
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
@@ -165,9 +165,9 @@ class ScaleInstance:
     eps > 0
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, *args):
+        # we always scale all
+        pass
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
@@ -180,7 +180,6 @@ class ScaleInstance:
                          value=data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
                          sparse_sizes=(m, n), is_sorted=True, trust_data=True)
         scales = torch.abs(torch.randn(m))
-        scales[torch.rand(m) > self.p] = 1.
         A = A * scales[:, None]
         new_b = data.b * scales
 

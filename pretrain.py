@@ -13,7 +13,7 @@ from tqdm import tqdm
 from data.collate_func import collate_pos_pair, collate_pos_neg_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper
+from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper, ComboAugmentWrapper
 from augmentation import TRANSFORM_CODEBOOK
 from augmentation.transform import GCNNorm
 from data.utils import save_run_config
@@ -22,19 +22,23 @@ from trainer import NTXentPretrainer, NPairPretrainer
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    use_negative_samples = args.pretrain.negatives > 0
+    use_negative_samples = False
+    # use_negative_samples = args.pretrain.negatives > 0
 
-    if not use_negative_samples:
-        # we sample from a pool of transforms and create 2 views of pos pairs
-        # drop node first, then normalize degree
-        aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
-        transform = [DuoAugmentWrapper(aug_list)]
+    # if not use_negative_samples:
+    #     # we sample from a pool of transforms and create 2 views of pos pairs
+    #     # drop node first, then normalize degree
+    #     aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
+    #     transform = [DuoAugmentWrapper(aug_list)]
+    #
+    # else:
+    #     # todo: for now, stick to 1 transform, and create 1 pos + N neg samples
+    #     assert len(args.pretrain.method) == 1
+    #     aug_method = TRANSFORM_CODEBOOK[args.pretrain.method](args.pretrain.drop_rate)
+    #     transform = [PosNegAugmentWrapper(aug_method, args.pretrain.negatives)]
 
-    else:
-        # todo: for now, stick to 1 transform, and create 1 pos + N neg samples
-        assert len(args.pretrain.method) == 1
-        aug_method = TRANSFORM_CODEBOOK[args.pretrain.method](args.pretrain.drop_rate)
-        transform = [PosNegAugmentWrapper(aug_method, args.pretrain.negatives)]
+    aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
+    transform = [ComboAugmentWrapper(aug_list)]
 
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNorm())
