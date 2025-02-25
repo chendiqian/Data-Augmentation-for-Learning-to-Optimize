@@ -89,7 +89,6 @@ class BipartiteHeteroBackbone(torch.nn.Module):
 
         # x_dict['vals'] = self.fc_vals(x_dict['vals'])
         # x_dict['cons'] = self.fc_cons(x_dict['cons'])
-        pred = (global_mean_pool(x_dict['vals'], batch_dict['vals'], data.num_graphs) +
-                global_mean_pool(x_dict['cons'], batch_dict['cons'], data.num_graphs))
+        pred = global_mean_pool(x_dict['vals'], batch_dict['vals'], data.num_graphs)
         pred = self.fc_obj(pred)
         return pred
