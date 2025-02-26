@@ -16,8 +16,7 @@ def get_conv_layer(conv: str,
                    num_mlp_layers: int,
                    norm: str):
     if conv.lower() == 'gcnconv':
-        return GCNConv(edge_dim=1,
-                       hid_dim=hid_dim,
+        return GCNConv(hid_dim=hid_dim,
                        num_mlp_layers=num_mlp_layers,
                        norm=norm)
     elif conv.lower() == 'ginconv':
