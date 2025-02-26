@@ -159,7 +159,40 @@ class AddRedundantConstraint:
         return new_data
 
 
-class ScaleInstance:
+class ScaleObj:
+    """
+    c <- a * c
+    but it's not really obj value preserving, it is solution preserving
+    """
+
+    def __init__(self, *args):
+        # we allow 0.
+        self.scales = np.linspace(0., 2., 10)
+
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        scale = np.random.choice(self.scales).item()
+        new_data = data.__class__(
+            cons={
+                'num_nodes': data['cons'].num_nodes,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': data['vals'].num_nodes,
+                'x': data['vals'].x,
+            },
+            cons__to__vals={'edge_index': data[('cons', 'to', 'vals')].edge_index,
+                            'edge_attr': data[('cons', 'to', 'vals')].edge_attr},
+            q=data.q * scale,
+            b=data.b,
+            obj_solution=data.obj_solution * scale,
+        )
+        return new_data
+
+
+class ScaleConstraint:
     """
     eps * Ax <= eps * b does not change
     eps > 0
