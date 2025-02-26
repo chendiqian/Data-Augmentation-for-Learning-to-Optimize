@@ -40,6 +40,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
     transform = [ComboAugmentWrapper(aug_list)]
 
+    # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNormDumb())
     transform = Compose(transform)
