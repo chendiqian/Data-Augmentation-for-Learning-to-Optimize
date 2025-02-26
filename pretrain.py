@@ -15,7 +15,7 @@ from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
 from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper, ComboAugmentWrapper
 from augmentation import TRANSFORM_CODEBOOK
-from augmentation.transform import GCNNorm
+from augmentation.transform import GCNNormDumb
 from data.utils import save_run_config
 from models.hetero_gnn import BipartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer, NPairPretrainer
@@ -41,7 +41,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     transform = [ComboAugmentWrapper(aug_list)]
 
     if 'gcn' in args.backbone.conv:
-        transform.append(GCNNorm())
+        transform.append(GCNNormDumb())
     transform = Compose(transform)
     train_set = LPDataset(args.datapath, 'train', transform=transform)
     valid_set = LPDataset(args.datapath, 'valid', transform=transform)

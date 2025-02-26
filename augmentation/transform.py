@@ -24,3 +24,16 @@ class GCNNorm:
             if src != dst:
                 data[(dst, rel, src)].norm = norm
         return data
+
+
+class GCNNormDumb:
+    def __init__(self):
+        pass
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        for src, rel, dst in data.edge_index_dict.keys():
+            edge_index = data[(src, rel, dst)].edge_index
+            data[(src, rel, dst)].norm = torch.ones(edge_index.shape[1], dtype=torch.float)
+            if src != dst:
+                data[(dst, rel, src)].norm = torch.ones(edge_index.shape[1], dtype=torch.float)
+        return data
