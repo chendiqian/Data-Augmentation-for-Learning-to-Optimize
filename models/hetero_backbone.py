@@ -5,10 +5,9 @@ from torch_geometric.nn import MLP, global_mean_pool
 from torch_geometric.typing import EdgeType, NodeType
 
 from models.hetero_conv import TripartiteConv
-from models.convs.gcn2conv import GCN2Conv
 from models.convs.gcnconv import GCNConv
 from models.convs.ginconv import GINEConv
-from models.convs.custom_conv import CustomConv
+from models.convs.sageconv import SAGEConv
 
 
 def get_conv_layer(conv: str,
@@ -20,17 +19,11 @@ def get_conv_layer(conv: str,
                        num_mlp_layers=num_mlp_layers,
                        norm=norm)
     elif conv.lower() == 'ginconv':
-        return GINEConv(edge_dim=1,
-                        hid_dim=hid_dim,
+        return GINEConv(hid_dim=hid_dim,
                         num_mlp_layers=num_mlp_layers,
                         norm=norm)
-    elif conv.lower() == 'gcn2conv':
-        return GCN2Conv(edge_dim=1,
-                        hid_dim=hid_dim,
-                        num_mlp_layers=num_mlp_layers,
-                        norm=norm)
-    elif conv.lower() == 'customconv':
-        return CustomConv(hid_dim=hid_dim, num_mlp_layers=num_mlp_layers, norm=norm)
+    elif conv.lower() == 'sageconv':
+        return SAGEConv(hid_dim=hid_dim, num_mlp_layers=num_mlp_layers, norm=norm)
     else:
         raise NotImplementedError
 

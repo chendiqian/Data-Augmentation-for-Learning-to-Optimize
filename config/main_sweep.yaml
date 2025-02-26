@@ -36,7 +36,7 @@ parameters:
     value: 1.
 
   backbone.conv:
-    value: customconv
+    value: sageconv
   backbone.hidden:
     value: 128
   backbone.num_encode_layers:
