@@ -72,18 +72,14 @@ class BipartiteHeteroBackbone(torch.nn.Module):
         else:
             vals_embedding = self.q_encoder(data.q[:, None])
 
-        x_dict: Dict[NodeType, torch.FloatTensor] = {
-            'vals': vals_embedding,
-            'cons': cons_embedding}
-        x0_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding,
-                                                      'cons': cons_embedding}
-        return batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict, x0_dict
+        x_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding, 'cons': cons_embedding}
+        return batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict
 
     def forward(self, data):
-        batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict, x0_dict = self.init_embedding(data)
+        batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict = self.init_embedding(data)
 
         for i in range(self.num_layers):
-            x_dict = self.gcns[i](x_dict, x0_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
+            x_dict = self.gcns[i](x_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
 
         # x_dict['vals'] = self.fc_vals(x_dict['vals'])
         # x_dict['cons'] = self.fc_cons(x_dict['cons'])

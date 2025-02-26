@@ -20,7 +20,6 @@ class TripartiteConv(torch.nn.Module):
             {'vals_cons': v2c_conv,
              'cons_vals': c2v_conv}
         )
-        self.has_skip = 'x_0' in inspect.signature(v2c_conv.forward).parameters.keys()
         # we use c -> v -> o setting, so o is the final output
         self.conv_sequence = [('vals_cons',),
                               ('cons_vals',),]
@@ -29,7 +28,6 @@ class TripartiteConv(torch.nn.Module):
     def forward(
             self,
             x_dict: Dict[NodeType, torch.FloatTensor],
-            x0_dict: Dict[NodeType, torch.FloatTensor],
             batch_dict: Dict[NodeType, torch.LongTensor],
             edge_index_dict: Dict[EdgeType, torch.LongTensor],
             edge_attr_dict: Dict[EdgeType, torch.FloatTensor],
@@ -43,8 +41,6 @@ class TripartiteConv(torch.nn.Module):
             for conv in conv_group:
                 src, dst = conv.split('_')
                 args = [(x_dict[src], x_dict[dst])]
-                if self.has_skip:
-                    args.append(x0_dict[dst])
                 args = args + [edge_index_dict[(src, 'to', dst)],
                                edge_attr_dict[(src, 'to', dst)],
                                batch_dict[dst]]
