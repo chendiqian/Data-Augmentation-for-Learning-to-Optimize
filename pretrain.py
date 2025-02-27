@@ -1,5 +1,5 @@
-import os
 import copy
+import os
 
 import hydra
 import torch
@@ -10,19 +10,20 @@ from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
 from tqdm import tqdm
 
+import transforms
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from transforms.wrapper import DuoAugmentWrapper, ComboAugmentWrapper
-from transforms import TRANSFORM_CODEBOOK
-from transforms.gcn_norm import GCNNormDumb
 from data.utils import save_run_config
 from models.hetero_gnn import BipartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer
+from transforms.gcn_norm import GCNNormDumb
+from transforms.wrapper import ComboAugmentWrapper
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
+    aug_list = [getattr(transforms, aug_class)(**kwargs)
+                for aug_class, kwargs in args.pretrain.method.items() if kwargs.strength > 0.]
     transform = [ComboAugmentWrapper(aug_list)]
 
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!

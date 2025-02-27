@@ -3,20 +3,25 @@ from typing import List, Tuple
 
 from torch_geometric.data import HeteroData
 
+from . import TRANSFORM_CODEBOOK
+
 
 class SingleAugmentWrapper:
     """
     Return 1 views of the graph, perturbation rate can vary
     """
 
-    def __init__(self, transform_class_list: List, rate: float):
-        self.transform_class_list = transform_class_list
-        self.rate = rate
+    def __init__(self, transforms: List):
+        self.max_strength_dict = {tf: tf.p for tf in transforms}
+        sorted_transforms = sorted(transforms, key=lambda tf: TRANSFORM_CODEBOOK[tf.__class__])
+        self.transforms = sorted_transforms
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        for tf_class in self.transform_class_list:
-            tf = tf_class(random.random() * self.rate)
-            data = tf(data)
+        for tf_class in self.transforms:
+            max_rate = self.max_strength_dict[tf_class]
+            tf_class.p = random.random() * max_rate
+            data = tf_class(data)
+
         return data
 
 
@@ -26,6 +31,7 @@ class DuoAugmentWrapper:
     """
 
     def __init__(self, transforms: List):
+        raise DeprecationWarning
         self.transforms = transforms
 
     def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
@@ -43,6 +49,7 @@ class DuoAugmentWrapper:
 
 class PosNegAugmentWrapper:
     def __init__(self, transform, negatives):
+        raise DeprecationWarning
         self.transform = transform
         self.negatives = negatives
 
@@ -54,7 +61,8 @@ class PosNegAugmentWrapper:
 
 class ComboAugmentWrapper:
     def __init__(self, transforms: List):
-        self.transforms = transforms
+        sorted_transforms = sorted(transforms, key=lambda tf: TRANSFORM_CODEBOOK[tf.__class__])
+        self.transforms = sorted_transforms
 
     def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
         d1 = d2 = data

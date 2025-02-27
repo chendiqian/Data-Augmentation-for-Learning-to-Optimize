@@ -68,54 +68,13 @@ class AddRedundantConstraint:
     Add more constraints PAx <= Pb + eps.
     """
 
-    def __init__(self, p, affinity=3):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength=0.2, affinity=3):
+        assert 0 < strength < 1
+        self.p = strength
         self.affinity = affinity
 
     def neg(self, data: HeteroData, negatives: int) -> List[HeteroData]:
-        m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        num_new_cons = int(m * self.p)
-        edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
-        A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
-                          (edge_index[0], edge_index[1])), shape=(m, n))
-
-        neg_samples = []
-        # todo: parallelize the matmul
-        for i in range(negatives):
-            eye_mat = sp.diags_array(np.random.randn(m), format='csr')
-            rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
-            rand_mat.data = np.random.randn(*rand_mat.data.shape)
-            mat = sp.vstack([eye_mat, rand_mat])
-
-            A_new = (mat @ A).tocoo()
-            edge_index = torch.from_numpy(np.vstack([A_new.row, A_new.col])).long()
-            edge_attr = torch.from_numpy(A_new.data)[:, None].float()
-
-            new_b = mat @ data.b.numpy()
-            bias = np.random.randn(new_b.shape[0])
-            bias[:m] = 0
-            new_b += bias
-            new_b = torch.from_numpy(new_b).float()
-
-            new_data = data.__class__(
-                cons={
-                    'num_nodes': num_new_cons + m,
-                    'x': torch.empty(m + num_new_cons),
-                },
-                vals={
-                    'num_nodes': n,
-                    'x': data['vals'].x,
-                },
-                cons__to__vals={'edge_index': edge_index,
-                                'edge_attr': edge_attr},
-                q=data.q,
-                b=new_b,
-                obj_solution=data.obj_solution,
-            )
-            neg_samples.append(new_data)
-
-        return neg_samples
+        raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -162,9 +121,9 @@ class ScaleObj:
     but it's not really obj value preserving, it is solution preserving
     """
 
-    def __init__(self, p):
-        assert p > 0.
-        self.p = p
+    def __init__(self, strength=1.):
+        assert strength > 0.
+        self.p = strength
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
@@ -203,10 +162,10 @@ class ScaleConstraint:
     eps > 0
     """
 
-    def __init__(self, p):
-        assert p > 0
+    def __init__(self, strength=1.):
+        assert strength > 0
         # we scale all the constraints, but with variable strength
-        self.p = p
+        self.p = strength
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError

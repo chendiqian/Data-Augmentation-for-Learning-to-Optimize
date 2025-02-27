@@ -30,7 +30,15 @@ finetune:
   num_pred_layers: 1
 
 pretrain:
-  method: "32"
+  method:
+    ScaleConstraint:
+      strength: 1.
+    ScaleObj:
+      strength: 0.
+    AddRedundantConstraint:
+      strength: 0.5
+      affinity: 3
+
   lr: 1.e-3
   weight_decay: 0.
   epoch: 200

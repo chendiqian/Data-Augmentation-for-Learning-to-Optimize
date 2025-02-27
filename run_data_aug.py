@@ -1,25 +1,25 @@
+import copy
 import os
 
 import hydra
-import copy
 import numpy as np
 import torch
+import wandb
+from omegaconf import DictConfig, OmegaConf
 from torch import optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-import wandb
 from torch_geometric.transforms import Compose
-from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
 
-from data.dataset import LPDataset
+import transforms
 from data.collate_func import collate_fn_lp_base
-from transforms.wrapper import SingleAugmentWrapper
-from transforms import TRANSFORM_CODEBOOK
-from transforms.gcn_norm import GCNNorm
+from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
+from data.utils import save_run_config
 from models.hetero_gnn import BipartiteHeteroGNN
 from trainer import PlainGNNTrainer
-from data.utils import save_run_config
+from transforms.gcn_norm import GCNNorm
+from transforms.wrapper import SingleAugmentWrapper
 
 
 @hydra.main(version_base=None, config_path='./config', config_name="data_aug")
@@ -32,8 +32,9 @@ def main(args: DictConfig):
                config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
                entity="chendiqian")  # use your own entity
 
-    aug_list = [TRANSFORM_CODEBOOK[char] for char in list(args.data_aug.method)]
-    transform = [SingleAugmentWrapper(aug_list, args.data_aug.drop_rate)]
+    aug_list = [getattr(transforms, aug_class)(**kwargs)
+                for aug_class, kwargs in args.data_aug.method.items() if kwargs.strength > 0.]
+    transform = [SingleAugmentWrapper(aug_list)]
 
     if 'gcn' in args.backbone.conv:
         extra_transform = GCNNorm()
