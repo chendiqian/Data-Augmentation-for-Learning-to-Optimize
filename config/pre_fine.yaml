@@ -30,7 +30,6 @@ finetune:
   num_pred_layers: 1
 
 pretrain:
-  negatives: 4
   method: "32"
   lr: 1.e-3
   weight_decay: 0.
