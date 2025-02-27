@@ -13,9 +13,9 @@ from omegaconf import DictConfig, OmegaConf
 
 from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
-from augmentation.wrapper import SingleAugmentWrapper
-from augmentation import TRANSFORM_CODEBOOK
-from augmentation.transform import GCNNorm
+from transforms.wrapper import SingleAugmentWrapper
+from transforms import TRANSFORM_CODEBOOK
+from transforms.gcn_norm import GCNNorm
 from data.prefetch_generator import BackgroundGenerator
 from models.hetero_gnn import BipartiteHeteroGNN
 from trainer import PlainGNNTrainer
