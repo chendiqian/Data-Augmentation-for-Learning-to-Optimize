@@ -1,4 +1,5 @@
 from typing import Tuple, List
+import math
 
 import numpy as np
 import torch
@@ -161,15 +162,22 @@ class ScaleObj:
     but it's not really obj value preserving, it is solution preserving
     """
 
-    def __init__(self, *args):
-        # we allow 0.
-        self.scales = np.linspace(0., 2., 10)
+    def __init__(self, p):
+        self.p = p
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        scale = np.random.choice(self.scales).item()
+
+        # scales = abs(1 + N(0, 1) * exp(p - 1))
+
+        noise_scale = math.exp(self.p) - 1.
+        # 0. -> 0., 1. -> 1.73
+
+        noise = torch.randn(1) * noise_scale
+        scale = (noise + 1.).abs()
+
         new_data = data.__class__(
             cons={
                 'num_nodes': data['cons'].num_nodes,
@@ -194,9 +202,10 @@ class ScaleConstraint:
     eps > 0
     """
 
-    def __init__(self, *args):
-        # we always scale all
-        pass
+    def __init__(self, p):
+        assert 0 < p <= 1
+        # we scale all the constraints, but with variable strength
+        self.p = p
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
@@ -208,7 +217,14 @@ class ScaleConstraint:
                          col=data[('cons', 'to', 'vals')].edge_index[1],
                          value=data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
                          sparse_sizes=(m, n), is_sorted=True, trust_data=True)
-        scales = torch.abs(torch.randn(m))
+
+        # scales = abs(1 + N(0, 1) * exp(p - 1))
+        noise_scale = math.exp(self.p) - 1.
+        # 0. -> 0., 1. -> 1.73
+
+        noise = torch.randn(m) * noise_scale
+        scales = (noise + torch.ones_like(noise)).abs()
+
         A = A * scales[:, None]
         new_b = data.b * scales
 
