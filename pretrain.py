@@ -10,33 +10,18 @@ from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
 from tqdm import tqdm
 
-from data.collate_func import collate_pos_pair, collate_pos_neg_pair
+from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.prefetch_generator import BackgroundGenerator
-from augmentation.wrapper import DuoAugmentWrapper, PosNegAugmentWrapper, ComboAugmentWrapper
+from augmentation.wrapper import DuoAugmentWrapper, ComboAugmentWrapper
 from augmentation import TRANSFORM_CODEBOOK
 from augmentation.transform import GCNNormDumb
 from data.utils import save_run_config
 from models.hetero_gnn import BipartiteHeteroPretrainGNN
-from trainer import NTXentPretrainer, NPairPretrainer
+from trainer import NTXentPretrainer
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    use_negative_samples = False
-    # use_negative_samples = args.pretrain.negatives > 0
-
-    # if not use_negative_samples:
-    #     # we sample from a pool of transforms and create 2 views of pos pairs
-    #     # drop node first, then normalize degree
-    #     aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
-    #     transform = [DuoAugmentWrapper(aug_list)]
-    #
-    # else:
-    #     # todo: for now, stick to 1 transform, and create 1 pos + N neg samples
-    #     assert len(args.pretrain.method) == 1
-    #     aug_method = TRANSFORM_CODEBOOK[args.pretrain.method](args.pretrain.drop_rate)
-    #     transform = [PosNegAugmentWrapper(aug_method, args.pretrain.negatives)]
-
     aug_list = [TRANSFORM_CODEBOOK[char](args.pretrain.drop_rate) for char in list(args.pretrain.method)]
     transform = [ComboAugmentWrapper(aug_list)]
 
@@ -51,7 +36,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         valid_set = valid_set[:20]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    collate_fn = collate_pos_neg_pair if use_negative_samples else collate_pos_pair
+    collate_fn = collate_pos_pair
     train_loader = DataLoader(train_set,
                               batch_size=args.pretrain.batchsize,
                               shuffle=True,
@@ -79,10 +64,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                                                      patience=50,
                                                      min_lr=1.e-5)
 
-    if use_negative_samples:
-        trainer = NPairPretrainer(args.pretrain.temperature)
-    else:
-        trainer = NTXentPretrainer(args.pretrain.temperature)
+    trainer = NTXentPretrainer(args.pretrain.temperature)
 
     pbar = tqdm(range(args.pretrain.epoch))
     for epoch in pbar:
