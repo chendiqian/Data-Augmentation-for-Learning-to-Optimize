@@ -1,4 +1,4 @@
-from random import choice, choices
+import random
 from typing import List, Tuple
 
 from torch_geometric.data import HeteroData
@@ -6,15 +6,17 @@ from torch_geometric.data import HeteroData
 
 class SingleAugmentWrapper:
     """
-    Return 2 views of the graph
+    Return 1 views of the graph, perturbation rate can vary
     """
 
-    def __init__(self, transforms: List):
-        self.transforms = transforms
+    def __init__(self, transform_class_list: List, rate: float):
+        self.transform_class_list = transform_class_list
+        self.rate = rate
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        tf = choice(self.transforms)
-        data = tf(data)
+        for tf_class in self.transform_class_list:
+            tf = tf_class(random.random() * self.rate)
+            data = tf(data)
         return data
 
 
@@ -32,7 +34,7 @@ class DuoAugmentWrapper:
         #     t1, t2 = choices(self.transforms, k=2)
         #     if not (isinstance(t1, IdentityAugmentation) and isinstance(t2, IdentityAugmentation)):
         #         break
-        t1, t2 = choices(self.transforms, k=2)
+        t1, t2 = random.choices(self.transforms, k=2)
 
         data1 = t1(data)
         data2 = t2(data)

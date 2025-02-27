@@ -32,8 +32,8 @@ def main(args: DictConfig):
                config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
                entity="chendiqian")  # use your own entity
 
-    aug_list = [TRANSFORM_CODEBOOK[char](args.data_aug.drop_rate) for char in list(args.data_aug.method)]
-    transform = [SingleAugmentWrapper(aug_list)]
+    aug_list = [TRANSFORM_CODEBOOK[char] for char in list(args.data_aug.method)]
+    transform = [SingleAugmentWrapper(aug_list, args.data_aug.drop_rate)]
 
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNorm())
