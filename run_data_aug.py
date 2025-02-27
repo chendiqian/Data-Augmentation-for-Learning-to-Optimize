@@ -36,14 +36,17 @@ def main(args: DictConfig):
     transform = [SingleAugmentWrapper(aug_list, args.data_aug.drop_rate)]
 
     if 'gcn' in args.backbone.conv:
-        transform.append(GCNNorm())
+        extra_transform = GCNNorm()
+        transform.append(extra_transform)
+    else:
+        extra_transform = None
     transform = Compose(transform)
 
     train_set = LPDataset(args.datapath, 'train', transform=transform)
     if args.train_frac < 1:
         train_set = train_set[:int(len(train_set) * args.train_frac)]
-    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
-    test_set = LPDataset(args.datapath, 'test', transform=transform)
+    valid_set = LPDataset(args.datapath, 'valid', transform=extra_transform)
+    test_set = LPDataset(args.datapath, 'test', transform=extra_transform)
     if args.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
