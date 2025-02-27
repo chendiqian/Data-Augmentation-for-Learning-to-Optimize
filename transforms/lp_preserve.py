@@ -163,6 +163,7 @@ class ScaleObj:
     """
 
     def __init__(self, p):
+        assert p > 0.
         self.p = p
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
@@ -203,7 +204,7 @@ class ScaleConstraint:
     """
 
     def __init__(self, p):
-        assert 0 < p <= 1
+        assert p > 0
         # we scale all the constraints, but with variable strength
         self.p = p
 
