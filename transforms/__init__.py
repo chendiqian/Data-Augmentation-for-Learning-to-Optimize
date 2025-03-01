@@ -2,7 +2,8 @@ from transforms.graph_cl import GraphCLDropNode, GraphCLMaskNode, GraphCLPerturb
 from transforms.lp_preserve import (DropInactiveConstraint,
                                     AddRedundantConstraint,
                                     ScaleConstraint, ScaleObj,
-                                    AddOrthogonalConstraint)
+                                    AddOrthogonalConstraint,
+                                    AddDumbVariables)
 
 # priority, the smaller, the higher
 TRANSFORM_CODEBOOK = {
@@ -22,6 +23,7 @@ __all__ = [
     'GraphCLPerturbEdge',
 
     'AddRedundantConstraint',
+    'AddDumbVariables',
     'ScaleConstraint',
     'ScaleObj',
 ]

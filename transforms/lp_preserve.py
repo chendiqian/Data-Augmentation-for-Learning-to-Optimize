@@ -10,8 +10,6 @@ from torch_scatter import scatter_sum
 from torch_sparse import SparseTensor
 
 
-# Todo: add redundant variables
-
 # Todo: change some existing constraints
 
 class DropInactiveConstraint:
@@ -269,6 +267,50 @@ class AddOrthogonalConstraint:
                             'edge_attr': new_c2v_edge_attr},
             q=data.q,
             b=new_b,
+            obj_solution=data.obj_solution,
+        )
+        return new_data
+
+
+class AddDumbVariables:
+    """
+    Add variables with non-negative c value
+    """
+
+    def __init__(self, p):
+        assert 0 < p < 1
+        self.p = p
+
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+
+        num_new_vars = int(n * self.p)
+        density = data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n)
+        rand_mat = sp.random_array((m, num_new_vars), density=density, format='coo')
+        extra_edge_index = torch.from_numpy(np.vstack([rand_mat.row, rand_mat.col])).long()
+        extra_edge_index[1] += n
+
+        # Todo: maybe not rand, but -1 0 +1 for some class of LP
+        # much be positive, otherwise would relax the constraints and might change the solution
+        extra_edge_attr = torch.rand(extra_edge_index.shape[1], 1)
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': m,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': n + num_new_vars,
+                'x': torch.empty(m + num_new_vars),
+            },
+            cons__to__vals={'edge_index': torch.hstack([data[('cons', 'to', 'vals')].edge_index, extra_edge_index]),
+                            'edge_attr': torch.vstack([data[('cons', 'to', 'vals')].edge_attr, extra_edge_attr])},
+            # added c must be non-negative, otherwise might change the solution
+            q=torch.cat([data.q, torch.rand(num_new_vars)]),
+            b=data.b,
             obj_solution=data.obj_solution,
         )
         return new_data
