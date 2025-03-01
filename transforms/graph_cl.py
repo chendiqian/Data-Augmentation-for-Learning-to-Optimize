@@ -1,9 +1,9 @@
 import torch
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import bipartite_subgraph
+from torch_geometric.utils import bipartite_subgraph, add_random_edge
 
 
-class RandomDropNode:
+class GraphCLDropNode:
     """
     Trivially drop variable and constraint nodes.
     This will violate the original LP problem.
@@ -45,9 +45,9 @@ class RandomDropNode:
         return new_data
 
 
-class RandomDropEdge:
+class GraphCLPerturbEdge:
     """
-    Trivially drop A connections.
+    Trivially drop or add A connections.
     This will violate the original LP problem.
     """
 
@@ -57,11 +57,17 @@ class RandomDropEdge:
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        ne = data[('cons', 'to', 'vals')].edge_index.shape[1]
-        edge_mask = torch.rand(ne) > self.p
+        edge_index = data[('cons', 'to', 'vals')].edge_index
+        ne = edge_index.shape[1]
 
+        # remove edges
+        edge_mask = torch.rand(ne) > self.p
         c2v_edge_index = data[('cons', 'to', 'vals')].edge_index[:, edge_mask]
         c2v_edge_attr = data[('cons', 'to', 'vals')].edge_attr[edge_mask, :]
+
+        # add edges
+        added_edge_index = add_random_edge(edge_index, p=self.p, num_nodes=(m, n))[1]
+        added_edge_attr = torch.randn(added_edge_index.shape[1], 1)
 
         new_data = data.__class__(
             cons={
@@ -72,8 +78,8 @@ class RandomDropEdge:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            cons__to__vals={'edge_index': c2v_edge_index,
-                            'edge_attr': c2v_edge_attr},
+            cons__to__vals={'edge_index': torch.hstack([c2v_edge_index, added_edge_index]),
+                            'edge_attr': torch.vstack([c2v_edge_attr, added_edge_attr])},
             q=data.q,
             b=data.b,
             obj_solution=data.obj_solution,  # this is actually not correct
@@ -81,7 +87,7 @@ class RandomDropEdge:
         return new_data
 
 
-class RandomMaskNode:
+class GraphCLMaskNode:
     """
     Trivially mask variable and constraint nodes.
     This will violate the original LP problem.
