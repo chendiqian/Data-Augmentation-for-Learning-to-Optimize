@@ -72,6 +72,6 @@ class BipartiteHeteroPretrainGNN(torch.nn.Module):
     def forward(self, data):
         obj_embedding, node_embedding = self.encoder(data)
         obj_embedding = self.predictor(obj_embedding)
-        if node_embedding is not None and self.self.node_predictor is not None:
+        if node_embedding is not None and self.node_predictor is not None:
             node_embedding = self.node_predictor(node_embedding)
         return obj_embedding, node_embedding
