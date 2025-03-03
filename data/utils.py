@@ -1,4 +1,5 @@
 import os
+import pdb
 import time
 
 import numpy as np
@@ -80,6 +81,6 @@ def compute_acc(pred1, pred2):
     # acc: pos-pair embedding has the highest cos similarity
     cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
     sort_idx = cos.argmax(dim=1)
-    sort_label = torch.arange(sort_idx.shape[1], device=pred1.device)
+    sort_label = torch.arange(pred1.shape[0], device=pred1.device)
     num_corrects = (sort_idx == sort_label).sum()
     return num_corrects
