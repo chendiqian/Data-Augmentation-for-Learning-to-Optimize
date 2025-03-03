@@ -55,7 +55,6 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
                                    backbone_pred_layers=args.backbone.num_pred_layers,
                                    norm=args.backbone.norm).to(device)
         model.encoder.load_state_dict(pretrained_state_dict)
-        best_model = copy.deepcopy(model.state_dict())
         trainer = PlainGNNTrainer(args.losstype)
     else:
         model = BipartiteHeteroBackbone(
@@ -91,7 +90,6 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         test_loader = DataLoader(test_ds, batch_size=args.finetune.batchsize, shuffle=False)
 
         model = MLP([args.backbone.hidden] * args.finetune.num_pred_layers + [1], norm=None).to(device)
-        best_model = copy.deepcopy(model.state_dict())
 
         trainer = LinearTrainer(args.losstype)
 
