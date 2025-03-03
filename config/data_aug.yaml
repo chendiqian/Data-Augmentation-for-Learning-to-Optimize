@@ -32,6 +32,4 @@ data_aug:
     ScaleConstraint:
       strength: 1.
 
-  drop_rate: 0.5
-
 num_pred_layers: 1
