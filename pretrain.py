@@ -60,7 +60,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     optimizer = optim.Adam(model.parameters(), lr=args.pretrain.lr, weight_decay=args.pretrain.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                     mode='max',
+                                                     mode='min',
                                                      factor=0.5,
                                                      patience=50,
                                                      min_lr=1.e-5)
@@ -73,11 +73,11 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
         if scheduler is not None:
-            scheduler.step(val_acc)
+            scheduler.step(val_loss)
 
-        if trainer.best_val_acc < val_acc:
+        if trainer.best_val_loss > val_loss:
             trainer.patience = 0
-            trainer.best_val_acc = val_acc
+            trainer.best_val_loss = val_loss
             best_model = copy.deepcopy(model.encoder.state_dict())
             if args.ckpt:
                 torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
@@ -88,9 +88,9 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
             break
 
         stats_dict = {'pretrain_train_loss': train_loss,
-                      'pretrain_train_top5acc': train_acc,
+                      'pretrain_train_acc': train_acc,
                       'pretrain_val_loss': val_loss,
-                      'pretrain_val_top5acc': val_acc,
+                      'pretrain_val_acc': val_acc,
                       'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
 
         pbar.set_postfix(stats_dict)
