@@ -80,8 +80,8 @@ class NTXentPretrainer:
             data1 = data1.to(device)
             data2 = data2.to(device)
 
-            pred1 = model(data1)
-            pred2 = model(data2)
+            pred1, _ = model(data1)
+            pred2, _ = model(data2)
 
             pred = torch.cat([pred1, pred2], dim=0)
             label = torch.arange(pred1.shape[0], device=device).repeat(2)
@@ -117,8 +117,8 @@ class NTXentPretrainer:
             data1 = data1.to(device)
             data2 = data2.to(device)
 
-            pred1 = model(data1)
-            pred2 = model(data2)
+            pred1, _ = model(data1)
+            pred2, _ = model(data2)
 
             pred = torch.cat([pred1, pred2], dim=0)
             label = torch.arange(pred1.shape[0], device=device).repeat(2)

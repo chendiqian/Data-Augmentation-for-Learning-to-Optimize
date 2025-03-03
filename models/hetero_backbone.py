@@ -36,7 +36,8 @@ class BipartiteHeteroBackbone(torch.nn.Module):
                  num_conv_layers,
                  num_mlp_layers,
                  backbone_pred_layers,
-                 norm):
+                 norm,
+                 output_nodes=False):
         super().__init__()
 
         self.num_layers = num_conv_layers
@@ -50,12 +51,17 @@ class BipartiteHeteroBackbone(torch.nn.Module):
                 c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
             ))
 
-        # self.fc_cons = MLP([hid_dim] * num_pred_layers, norm=None)
-        # self.fc_vals = MLP([hid_dim] * num_pred_layers, norm=None)
+        self.fc_cons = self.fc_vals = None
         if backbone_pred_layers == 0:
             self.fc_obj = torch.nn.Identity()
+            if output_nodes:
+                self.fc_cons = torch.nn.Identity()
+                self.fc_vals = torch.nn.Identity()
         else:
             self.fc_obj = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
+            if output_nodes:
+                self.fc_cons = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
+                self.fc_vals = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
 
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
@@ -75,9 +81,13 @@ class BipartiteHeteroBackbone(torch.nn.Module):
         for i in range(self.num_layers):
             x_dict = self.gcns[i](x_dict, batch_dict, edge_index_dict, edge_attr_dict, norm_dict)
 
-        # x_dict['vals'] = self.fc_vals(x_dict['vals'])
-        # x_dict['cons'] = self.fc_cons(x_dict['cons'])
-        pred = (global_mean_pool(x_dict['vals'], batch_dict['vals'], data.num_graphs) +
-                global_mean_pool(x_dict['cons'], batch_dict['cons'], data.num_graphs))
-        pred = self.fc_obj(pred)
-        return pred
+        global_pred = (global_mean_pool(x_dict['vals'], batch_dict['vals'], data.num_graphs) +
+                       global_mean_pool(x_dict['cons'], batch_dict['cons'], data.num_graphs))
+        global_pred = self.fc_obj(global_pred)
+
+        if self.fc_vals is not None and self.fc_cons is not None:
+            node_embeddings = torch.cat([self.fc_vals(x_dict['vals']),
+                                         self.fc_cons(x_dict['cons'])], dim=0)
+        else:
+            node_embeddings = None
+        return global_pred, node_embeddings
