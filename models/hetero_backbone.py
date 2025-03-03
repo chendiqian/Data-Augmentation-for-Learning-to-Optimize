@@ -36,15 +36,12 @@ class BipartiteHeteroBackbone(torch.nn.Module):
                  num_conv_layers,
                  num_mlp_layers,
                  backbone_pred_layers,
-                 norm,
-                 erase_c=False):
+                 norm):
         super().__init__()
 
         self.num_layers = num_conv_layers
         self.b_encoder = MLP([1] + [hid_dim] * num_encode_layers, norm=None)
         self.q_encoder = MLP([1] + [hid_dim] * num_encode_layers, norm=None)
-
-        self.erase_c = erase_c
 
         self.gcns = torch.nn.ModuleList()
         for layer in range(num_conv_layers):
@@ -67,10 +64,7 @@ class BipartiteHeteroBackbone(torch.nn.Module):
         norm_dict: Dict[EdgeType, Optional[torch.FloatTensor]] = data.norm_dict
 
         cons_embedding = self.b_encoder(data.b[:, None])
-        if self.erase_c:
-            vals_embedding = data.b.new_zeros(data['vals'].num_nodes, cons_embedding.shape[1])
-        else:
-            vals_embedding = self.q_encoder(data.q[:, None])
+        vals_embedding = self.q_encoder(data.q[:, None])
 
         x_dict: Dict[NodeType, torch.FloatTensor] = {'vals': vals_embedding, 'cons': cons_embedding}
         return batch_dict, edge_index_dict, edge_attr_dict, norm_dict, x_dict
