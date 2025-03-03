@@ -278,8 +278,8 @@ class AddDumbVariables:
     """
 
     def __init__(self, strength=0.1):
-        assert 0 < p < 1
-        self.p = p
+        assert 0 < strength < 1
+        self.p = strength
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
