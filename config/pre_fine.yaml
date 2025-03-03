@@ -19,7 +19,7 @@ backbone:
   norm: graphnorm
 
 finetune:
-  lr: 1.e-4
+  lr: 1.e-3
   weight_decay: 0.
   epoch: 1000
   patience: 200
