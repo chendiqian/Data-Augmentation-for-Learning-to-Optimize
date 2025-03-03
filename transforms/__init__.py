@@ -4,6 +4,7 @@ from transforms.lp_preserve import (DropInactiveConstraint,
                                     ScaleConstraint, ScaleObj,
                                     AddOrthogonalConstraint,
                                     AddDumbVariables)
+from transforms.gcc_subgraph import GCCSubgraph
 
 # priority, the smaller, the higher
 TRANSFORM_CODEBOOK = {
@@ -11,6 +12,9 @@ TRANSFORM_CODEBOOK = {
     GraphCLDropNode: 1,
     GraphCLMaskNode: 2,
     GraphCLPerturbEdge: 0,
+
+    # GCC:
+    GCCSubgraph: 0,
 
     # ours
     AddDumbVariables: 3,
@@ -23,6 +27,8 @@ __all__ = [
     'GraphCLDropNode',
     'GraphCLMaskNode',
     'GraphCLPerturbEdge',
+
+    'GCCSubgraph',
 
     'AddRedundantConstraint',
     'AddDumbVariables',
