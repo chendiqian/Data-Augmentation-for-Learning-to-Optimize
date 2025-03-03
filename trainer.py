@@ -1,8 +1,8 @@
 import torch
-import torch.nn.functional as F
 from pytorch_metric_learning.losses import NTXentLoss
 
 from data.n_pair_loss import NPairLoss
+from data.utils import compute_acc
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -97,12 +97,7 @@ class NTXentPretrainer:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
             optimizer.step()
 
-            # top 5 acc
-            cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
-            pos_mask = torch.eye(cos.shape[0], device=device).bool()
-            comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
-            sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
-            corrects += (sim_argsort < 5).sum()
+            corrects += compute_acc(pred1, pred2)
 
         return train_losses.item() / num_graphs, corrects.item() / num_graphs
 
@@ -130,12 +125,7 @@ class NTXentPretrainer:
             val_losses += loss.detach() * data1.num_graphs
             num_graphs += data1.num_graphs
 
-            # top 5 acc
-            cos = F.cosine_similarity(pred1[:, None], pred2[None, :], dim=-1)
-            pos_mask = torch.eye(cos.shape[0], device=device).bool()
-            comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
-            sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
-            corrects += (sim_argsort < 5).sum()
+            corrects += compute_acc(pred1, pred2)
 
         return val_losses.item() / num_graphs, corrects.item() / num_graphs
 

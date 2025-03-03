@@ -4,9 +4,12 @@ import time
 import numpy as np
 import torch
 from omegaconf import DictConfig, OmegaConf
+from torch.nn import functional as F
 from torch_geometric.utils import scatter
 from torch_sparse import SparseTensor
 from torch_sparse import spmm
+
+from trainer import device
 
 
 def sync_timer():
@@ -56,3 +59,29 @@ def calc_violation(pred, data):
                       data['cons'].num_nodes, data['vals'].num_nodes, pred).squeeze() - data.b
     violation = scatter(torch.relu(Ax_minus_b), data['cons'].batch, dim=0, reduce='mean')  # (batchsize,)
     return violation
+
+
+def compute_acc(pred1, pred2):
+    """
+    for evaluating SSL
+
+    Args:
+        pred1:
+        pred2:
+
+    Returns:
+
+    """
+    # # top 5 acc
+    # cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
+    # pos_mask = torch.eye(cos.shape[0], device=device).bool()
+    # comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
+    # sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
+    # num_corrects = (sim_argsort < 5).sum()
+
+    # acc: pos-pair embedding has the highest cos similarity
+    cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
+    sort_idx = cos.argmax(dim=1)
+    sort_label = torch.arange(sort_idx.shape[1], device=device)
+    num_corrects = (sort_idx == sort_label).sum()
+    return num_corrects
