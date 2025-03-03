@@ -9,9 +9,9 @@ class GraphCLDropNode:
     This will violate the original LP problem.
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength):
+        assert 0 < strength < 1
+        self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -51,9 +51,9 @@ class GraphCLPerturbEdge:
     This will violate the original LP problem.
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength):
+        assert 0 < strength < 1
+        self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -93,9 +93,9 @@ class GraphCLMaskNode:
     This will violate the original LP problem.
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength):
+        assert 0 < strength < 1
+        self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
