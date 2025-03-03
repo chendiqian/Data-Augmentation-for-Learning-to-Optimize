@@ -277,7 +277,7 @@ class AddDumbVariables:
     Add variables with non-negative c value
     """
 
-    def __init__(self, p):
+    def __init__(self, strength=0.1):
         assert 0 < p < 1
         self.p = p
 
