@@ -9,8 +9,6 @@ from torch_geometric.utils import scatter
 from torch_sparse import SparseTensor
 from torch_sparse import spmm
 
-from trainer import device
-
 
 def sync_timer():
     if torch.cuda.is_available():
@@ -74,7 +72,7 @@ def compute_acc(pred1, pred2):
     """
     # # top 5 acc
     # cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
-    # pos_mask = torch.eye(cos.shape[0], device=device).bool()
+    # pos_mask = torch.eye(cos.shape[0], device=pred1.device).bool()
     # comb_sim = torch.cat([cos[pos_mask][:, None], cos.masked_fill_(pos_mask, -1e10)], dim=1)
     # sim_argsort = comb_sim.argsort(dim=1, descending=True).argmin(dim=-1)
     # num_corrects = (sim_argsort < 5).sum()
@@ -82,6 +80,6 @@ def compute_acc(pred1, pred2):
     # acc: pos-pair embedding has the highest cos similarity
     cos = F.cosine_similarity(pred1.detach()[:, None], pred2.detach()[None, :], dim=-1)
     sort_idx = cos.argmax(dim=1)
-    sort_label = torch.arange(sort_idx.shape[1], device=device)
+    sort_label = torch.arange(sort_idx.shape[1], device=pred1.device)
     num_corrects = (sort_idx == sort_label).sum()
     return num_corrects
