@@ -1,6 +1,3 @@
-import copy
-import os
-
 import hydra
 import torch
 import wandb
@@ -8,15 +5,14 @@ from omegaconf import DictConfig, OmegaConf
 from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
-from tqdm import tqdm
 
 import transforms
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
-from data.prefetch_generator import BackgroundGenerator
 from data.utils import save_run_config
 from models.hetero_gnn import BipartiteHeteroPretrainGNN
 from trainer import NTXentPretrainer
+from training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.wrapper import ComboAugmentWrapper
 
@@ -56,7 +52,6 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         num_mlp_layers=args.backbone.num_mlp_layers,
         backbone_pred_layers=args.backbone.num_pred_layers,
         norm=args.backbone.norm).to(device)
-    best_model = copy.deepcopy(model.encoder.state_dict())
 
     optimizer = optim.Adam(model.parameters(), lr=args.pretrain.lr, weight_decay=args.pretrain.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -67,34 +62,9 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = NTXentPretrainer(args.pretrain.temperature)
 
-    pbar = tqdm(range(args.pretrain.epoch))
-    for epoch in pbar:
-        train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
-        val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
-
-        if scheduler is not None:
-            scheduler.step(val_loss)
-
-        if trainer.best_val_loss > val_loss:
-            trainer.patience = 0
-            trainer.best_val_loss = val_loss
-            best_model = copy.deepcopy(model.encoder.state_dict())
-            if args.ckpt:
-                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
-        else:
-            trainer.patience += 1
-
-        if trainer.patience > args.pretrain.patience:
-            break
-
-        stats_dict = {'pretrain_train_loss': train_loss,
-                      'pretrain_train_acc': train_acc,
-                      'pretrain_val_loss': val_loss,
-                      'pretrain_val_acc': val_acc,
-                      'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
-
-        pbar.set_postfix(stats_dict)
-        wandb.log(stats_dict)
+    best_model = pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.ckpt,
+                                              run_id, log_folder_name,
+                                              trainer, train_loader, val_loader, device, model, optimizer, scheduler)
     return best_model
 
 
