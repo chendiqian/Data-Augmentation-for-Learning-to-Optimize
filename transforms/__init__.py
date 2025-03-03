@@ -12,6 +12,8 @@ TRANSFORM_CODEBOOK = {
     GraphCLMaskNode: 2,
     GraphCLPerturbEdge: 0,
 
+    # ours
+    AddDumbVariables: 3,
     AddRedundantConstraint: 2,
     ScaleConstraint: 1,
     ScaleObj: 1,
