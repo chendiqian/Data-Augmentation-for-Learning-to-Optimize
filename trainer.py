@@ -264,7 +264,7 @@ class InfoGraphPretrainer:
             # homogeneous number of nodes
             vals_nnodes = (data['vals'].ptr[1:] - data['vals'].ptr[:-1]).to(device)
             cons_nnodes = (data['cons'].ptr[1:] - data['cons'].ptr[:-1]).to(device)
-            loss = local_global_loss(node_pred, global_pred, vals_nnodes + cons_nnodes)
+            loss = local_global_loss(node_pred, global_pred, vals_nnodes, cons_nnodes)
 
             train_losses += loss.detach() * data.num_graphs
             num_graphs += data.num_graphs
@@ -288,7 +288,7 @@ class InfoGraphPretrainer:
             # homogeneous number of nodes
             vals_nnodes = (data['vals'].ptr[1:] - data['vals'].ptr[:-1]).to(device)
             cons_nnodes = (data['cons'].ptr[1:] - data['cons'].ptr[:-1]).to(device)
-            loss = local_global_loss(node_pred, global_pred, vals_nnodes + cons_nnodes)
+            loss = local_global_loss(node_pred, global_pred, vals_nnodes, cons_nnodes)
 
             val_losses += loss.detach() * data.num_graphs
             num_graphs += data.num_graphs

@@ -55,11 +55,11 @@ def get_negative_expectation(q_samples, measure, average=True):
 
 
 # https://github.com/sunfanyunn/InfoGraph/blob/master/unsupervised/losses.py
-def local_global_loss(l_enc, g_enc, nnodes, measure='JSD'):
+def local_global_loss(l_enc, g_enc, vals_nnodes, cons_nnodes, measure='JSD'):
     """
 
     Args:
-        l: Local feature map.
+        l: Local feature map. it is stacked as [v1, v2, v3, ...., c1, c2, c3, ...]
         g: Global features.
         measure: Type of f-divergence. For use with mode `fd`
         mode: Loss mode. Fenchel-dual `fd`, NCE `nce`, or Donsker-Vadadhan `dv`.
@@ -70,14 +70,13 @@ def local_global_loss(l_enc, g_enc, nnodes, measure='JSD'):
     num_graphs = g_enc.shape[0]
     num_nodes = l_enc.shape[0]
 
-    batch = torch.arange(num_graphs, device=device).repeat_interleave(nnodes)
+    batch = torch.cat([torch.arange(num_graphs, device=device).repeat_interleave(vals_nnodes),
+                       torch.arange(num_graphs, device=device).repeat_interleave(cons_nnodes)], dim=0)
 
     pos_mask = torch.zeros(num_nodes, num_graphs, dtype=torch.float, device=device)
-    neg_mask = torch.ones(num_nodes, num_graphs, dtype=torch.float, device=device)
     arange_nnodes = torch.arange(num_nodes, device=device)
-
     pos_mask[arange_nnodes, batch] = 1.
-    neg_mask[arange_nnodes, batch] = 0.
+    neg_mask = 1. - pos_mask
 
     res = torch.mm(l_enc, g_enc.t())   # nnodes x ngraphs
 

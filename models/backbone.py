@@ -79,8 +79,7 @@ class Backbone(torch.nn.Module):
         global_pred = self.fc_obj(global_pred)
 
         if self.output_nodes:
-            node_embeddings = torch.cat([x_dict['vals'],
-                                         x_dict['cons']], dim=0)
+            node_embeddings = x_dict
         else:
             node_embeddings = None
         return global_pred, node_embeddings

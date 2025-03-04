@@ -107,7 +107,8 @@ class InfoGraphPretrainGNN(torch.nn.Module):
             self.node_predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
 
     def forward(self, data):
-        obj_embedding, node_embedding = self.encoder(data)
+        obj_embedding, x_dict = self.encoder(data)
+        node_embedding = torch.cat([x_dict['vals'], x_dict['cons']], dim=0)
         obj_embedding = self.predictor(obj_embedding)
         node_embedding = self.fc_nodes(node_embedding)
         node_embedding = self.node_predictor(node_embedding)
