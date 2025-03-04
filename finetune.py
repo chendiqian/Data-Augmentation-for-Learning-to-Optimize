@@ -12,7 +12,7 @@ from data.collate_func import collate_fn_lp_base
 from transforms.gcn_norm import GCNNorm
 from models.hetero_gnn import GNN
 from models.backbone import Backbone
-from trainer import PlainGNNTrainer, LinearTrainer
+from trainers.supervised_trainer import PlainGNNTrainer, LinearTrainer
 from training_loops import supervised_train_eval_loops
 from data.utils import save_run_config, setup_wandb
 

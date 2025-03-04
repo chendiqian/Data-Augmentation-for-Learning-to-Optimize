@@ -10,7 +10,7 @@ from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from data.utils import save_run_config, setup_wandb
 from models.hetero_gnn import GNN
-from trainer import PlainGNNTrainer
+from trainers.supervised_trainer import PlainGNNTrainer
 from training_loops import supervised_train_eval_loops
 from transforms.gcn_norm import GCNNorm
 

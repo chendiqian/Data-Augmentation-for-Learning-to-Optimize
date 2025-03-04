@@ -9,7 +9,7 @@ from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.utils import save_run_config, setup_wandb
 from models.hetero_gnn import IGSDPretrainGNN
-from trainer import IGSDPretrainer
+from trainers.igsd_pretrainer import IGSDPretrainer
 from training_loops import igsd_pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.igsd_ppr_augment import IGSDPageRankAugment

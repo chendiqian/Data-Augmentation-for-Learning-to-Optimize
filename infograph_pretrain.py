@@ -9,7 +9,7 @@ from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from data.utils import save_run_config, setup_wandb
 from models.hetero_gnn import InfoGraphPretrainGNN
-from trainer import InfoGraphPretrainer
+from trainers.infograph_pretrainer import InfoGraphPretrainer
 from training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNorm
 

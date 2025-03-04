@@ -11,7 +11,7 @@ from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.utils import save_run_config, setup_wandb
 from models.hetero_gnn import PretrainGNN
-from trainer import NTXentPretrainer
+from trainers.ntxent_pretrainer import NTXentPretrainer
 from training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.wrapper import ComboAugmentWrapper
