@@ -10,7 +10,7 @@ import transforms
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from data.utils import save_run_config
-from models.hetero_gnn import BipartiteHeteroPretrainGNN
+from models.hetero_gnn import PretrainGNN
 from trainer import NTXentPretrainer
 from training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
@@ -43,7 +43,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                             shuffle=False,
                             collate_fn=collate_fn)
 
-    model = BipartiteHeteroPretrainGNN(
+    model = PretrainGNN(
         conv=args.backbone.conv,
         hid_dim=args.backbone.hidden,
         num_encode_layers=args.backbone.num_encode_layers,

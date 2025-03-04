@@ -1,4 +1,3 @@
-import inspect
 from typing import Dict
 from typing import Optional
 
@@ -7,7 +6,7 @@ from torch_geometric.typing import EdgeType, NodeType
 from torch_geometric.nn.conv.hetero_conv import group
 
 
-class TripartiteConv(torch.nn.Module):
+class HeteroConv(torch.nn.Module):
     def __init__(
             self,
             v2c_conv: torch.nn.Module,

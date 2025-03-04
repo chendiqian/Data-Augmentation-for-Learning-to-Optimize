@@ -11,7 +11,7 @@ import transforms
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from data.utils import save_run_config
-from models.hetero_gnn import BipartiteHeteroGNN
+from models.hetero_gnn import GNN
 from trainer import PlainGNNTrainer
 from training_loops import supervised_train_eval_loops
 from transforms.gcn_norm import GCNNorm
@@ -67,14 +67,14 @@ def main(args: DictConfig):
     test_objgaps = []
 
     for run in range(args.runs):
-        model = BipartiteHeteroGNN(conv=args.backbone.conv,
-                                   hid_dim=args.backbone.hidden,
-                                   num_encode_layers=args.backbone.num_encode_layers,
-                                   num_conv_layers=args.backbone.num_conv_layers,
-                                   num_pred_layers=args.num_pred_layers,
-                                   num_mlp_layers=args.backbone.num_mlp_layers,
-                                   backbone_pred_layers=args.backbone.num_pred_layers,
-                                   norm=args.backbone.norm).to(device)
+        model = GNN(conv=args.backbone.conv,
+                    hid_dim=args.backbone.hidden,
+                    num_encode_layers=args.backbone.num_encode_layers,
+                    num_conv_layers=args.backbone.num_conv_layers,
+                    num_pred_layers=args.num_pred_layers,
+                    num_mlp_layers=args.backbone.num_mlp_layers,
+                    backbone_pred_layers=args.backbone.num_pred_layers,
+                    norm=args.backbone.norm).to(device)
 
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,

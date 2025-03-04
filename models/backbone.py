@@ -4,7 +4,7 @@ import torch
 from torch_geometric.nn import MLP, global_mean_pool
 from torch_geometric.typing import EdgeType, NodeType
 
-from models.hetero_conv import TripartiteConv
+from models.hetero_conv import HeteroConv
 from models.convs.gcnconv import GCNConv
 from models.convs.ginconv import GINEConv
 from models.convs.sageconv import SAGEConv
@@ -28,7 +28,7 @@ def get_conv_layer(conv: str,
         raise NotImplementedError
 
 
-class BipartiteHeteroBackbone(torch.nn.Module):
+class Backbone(torch.nn.Module):
     def __init__(self,
                  conv,
                  hid_dim,
@@ -46,7 +46,7 @@ class BipartiteHeteroBackbone(torch.nn.Module):
 
         self.gcns = torch.nn.ModuleList()
         for layer in range(num_conv_layers):
-            self.gcns.append(TripartiteConv(
+            self.gcns.append(HeteroConv(
                 v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
                 c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
             ))
