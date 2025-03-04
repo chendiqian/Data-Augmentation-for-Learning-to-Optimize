@@ -6,10 +6,10 @@ from torch.utils.data import DataLoader
 
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
-from data.utils import save_run_config, setup_wandb
-from models.hetero_gnn import GAEPretrainGNN
+from utils.experiment import save_run_config, setup_wandb
+from models.gae_pretrain_gnn import GAEPretrainGNN
 from trainers.gae_pretrainer import GAEPretrainer
-from training_loops import pretraining_train_eval_loops
+from trainers.training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNorm
 
 

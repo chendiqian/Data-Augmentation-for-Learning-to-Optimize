@@ -2,7 +2,7 @@ import hydra
 import numpy as np
 import torch
 import wandb
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
@@ -10,10 +10,10 @@ from torch_geometric.transforms import Compose
 import transforms
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
-from data.utils import save_run_config, setup_wandb
+from utils.experiment import save_run_config, setup_wandb
 from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
-from training_loops import supervised_train_eval_loops
+from trainers.training_loops import supervised_train_eval_loops
 from transforms.gcn_norm import GCNNorm
 from transforms.wrapper import SingleAugmentWrapper
 

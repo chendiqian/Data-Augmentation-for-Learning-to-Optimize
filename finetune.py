@@ -13,8 +13,8 @@ from transforms.gcn_norm import GCNNorm
 from models.hetero_gnn import GNN
 from models.backbone import Backbone
 from trainers.supervised_trainer import PlainGNNTrainer, LinearTrainer
-from training_loops import supervised_train_eval_loops
-from data.utils import save_run_config, setup_wandb
+from trainers.training_loops import supervised_train_eval_loops
+from utils.experiment import save_run_config, setup_wandb
 
 
 def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pretrained_state_dict=None):

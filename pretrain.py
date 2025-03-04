@@ -1,7 +1,6 @@
 import hydra
 import torch
-import wandb
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
@@ -9,10 +8,10 @@ from torch_geometric.transforms import Compose
 import transforms
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
-from data.utils import save_run_config, setup_wandb
-from models.hetero_gnn import PretrainGNN
+from utils.experiment import save_run_config, setup_wandb
+from models.infonce_pretrain_gnn import PretrainGNN
 from trainers.ntxent_pretrainer import NTXentPretrainer
-from training_loops import pretraining_train_eval_loops
+from trainers.training_loops import pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.wrapper import ComboAugmentWrapper
 

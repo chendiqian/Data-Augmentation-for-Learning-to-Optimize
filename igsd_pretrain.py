@@ -1,19 +1,36 @@
+import copy
+import os
+from typing import List, Dict
+
 import hydra
 import torch
+import wandb
 from omegaconf import DictConfig
 from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
+from tqdm import tqdm
 
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
-from data.utils import save_run_config, setup_wandb
-from models.hetero_gnn import IGSDPretrainGNN
+from data.prefetch_generator import BackgroundGenerator
+from models.igsd_pretrain_gnn import IGSDPretrainGNN
 from trainers.igsd_pretrainer import IGSDPretrainer
-from training_loops import igsd_pretraining_train_eval_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.igsd_ppr_augment import IGSDPageRankAugment
 from transforms.wrapper import AnchorAugmentWrapper
+from utils.experiment import save_run_config, setup_wandb
+
+
+def average_weights(weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+    weights_avg = copy.deepcopy(weights[0])
+
+    for key in weights_avg.keys():
+        for i in range(1, len(weights)):
+            weights_avg[key] += weights[i][key]
+        weights_avg[key] = torch.div(weights_avg[key], len(weights))
+
+    return weights_avg
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
@@ -59,11 +76,37 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = IGSDPretrainer(args.pretrain.temperature)
 
+    pbar = tqdm(range(args.pretrain.epochs))
+
     # the best is the mean of student and teacher nets
-    best_model = igsd_pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.ckpt,
-                                                   run_id, log_folder_name,
-                                                   trainer, train_loader, val_loader, device, model,
-                                                   optimizer, scheduler)
+    best_model = average_weights([model.online_encoder.state_dict(), model.target_encoder.state_dict()])
+    for epoch in pbar:
+        train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+        val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+
+        if scheduler is not None:
+            scheduler.step(val_loss)
+
+        if trainer.best_val_loss > val_loss:
+            trainer.patience = 0
+            trainer.best_val_loss = val_loss
+            best_model = average_weights([model.online_encoder.state_dict(), model.target_encoder.state_dict()])
+            if args.ckpt:
+                torch.save(best_model, os.path.join(log_folder_name, f'best_model{run_id}.pt'))
+        else:
+            trainer.patience += 1
+
+        if trainer.patience > args.pretrain.patience:
+            break
+
+        stats_dict = {'pretrain_train_loss': train_loss,
+                      'pretrain_train_acc': train_acc,
+                      'pretrain_val_loss': val_loss,
+                      'pretrain_val_acc': val_acc,
+                      'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
+
+        pbar.set_postfix(stats_dict)
+        wandb.log(stats_dict)
     return best_model
 
 

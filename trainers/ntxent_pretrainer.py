@@ -1,7 +1,7 @@
 import torch
 from pytorch_metric_learning.losses import NTXentLoss
 
-from data.utils import compute_acc
+from utils.evaluation import compute_acc
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

@@ -3,7 +3,7 @@ import numpy as np
 import wandb
 from omegaconf import DictConfig
 
-from data.utils import save_run_config, setup_wandb
+from utils.experiment import save_run_config, setup_wandb
 from finetune import finetune
 from igsd_pretrain import pretrain
 
