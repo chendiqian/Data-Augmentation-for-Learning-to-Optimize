@@ -1,12 +1,11 @@
 import hydra
-import copy
 import numpy as np
 import torch
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 from torch_geometric.nn import MLP
 import wandb
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from data.dataset import LPDataset
 from data.collate_func import collate_fn_lp_base
@@ -15,7 +14,7 @@ from models.hetero_gnn import GNN
 from models.backbone import Backbone
 from trainer import PlainGNNTrainer, LinearTrainer
 from training_loops import supervised_train_eval_loops
-from data.utils import save_run_config
+from data.utils import save_run_config, setup_wandb
 
 
 def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pretrained_state_dict=None):
@@ -112,12 +111,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 @hydra.main(version_base=None, config_path='./config', config_name="pre_fine")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
-
-    wandb.init(project=args.wandb.project,
-               name=args.wandb.name if args.wandb.name else None,
-               mode="online" if args.wandb.enable else "disabled",
-               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
-               entity="chendiqian")  # use your own entity
+    setup_wandb(args)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_val_objgaps = []

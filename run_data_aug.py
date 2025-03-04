@@ -10,7 +10,7 @@ from torch_geometric.transforms import Compose
 import transforms
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
-from data.utils import save_run_config
+from data.utils import save_run_config, setup_wandb
 from models.hetero_gnn import GNN
 from trainer import PlainGNNTrainer
 from training_loops import supervised_train_eval_loops
@@ -21,12 +21,7 @@ from transforms.wrapper import SingleAugmentWrapper
 @hydra.main(version_base=None, config_path='./config', config_name="data_aug")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
-
-    wandb.init(project=args.wandb.project,
-               name=args.wandb.name if args.wandb.name else None,
-               mode="online" if args.wandb.enable else "disabled",
-               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
-               entity="chendiqian")  # use your own entity
+    setup_wandb(args)
 
     aug_list = [getattr(transforms, aug_class)(**kwargs)
                 for aug_class, kwargs in args.data_aug.method.items() if kwargs.strength > 0.]

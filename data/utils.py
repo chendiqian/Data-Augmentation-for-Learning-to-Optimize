@@ -34,6 +34,14 @@ def save_run_config(args: DictConfig):
     return None
 
 
+def setup_wandb(args):
+    wandb.init(project=args.wandb.project,
+               name=args.wandb.name if args.wandb.name else None,
+               mode="online" if args.wandb.enable else "disabled",
+               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
+               entity="chendiqian")  # use your own entity
+
+
 def recover_lp_from_data(data, dtype=np.float32):
     data = data.to('cpu')
     c = data.q.numpy().astype(dtype)

@@ -1,9 +1,9 @@
 import hydra
 import numpy as np
 import wandb
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
-from data.utils import save_run_config
+from data.utils import save_run_config, setup_wandb
 from finetune import finetune
 from infograph_pretrain import pretrain
 
@@ -11,12 +11,7 @@ from infograph_pretrain import pretrain
 @hydra.main(version_base=None, config_path='./config', config_name="infograph")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
-
-    wandb.init(project=args.wandb.project,
-               name=args.wandb.name if args.wandb.name else None,
-               mode="online" if args.wandb.enable else "disabled",
-               config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
-               entity="chendiqian")  # use your own entity
+    setup_wandb(args)
 
     best_val_objgaps = []
     test_objgaps = []
