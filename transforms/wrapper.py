@@ -70,3 +70,14 @@ class ComboAugmentWrapper:
             d1 = tf(d1)
             d2 = tf(d2)
         return d1, d2
+
+
+class AnchorAugmentWrapper:
+    def __init__(self, transforms):
+        self.transforms = sorted(transforms, key=lambda tf: TRANSFORM_CODEBOOK[tf.__class__])
+
+    def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
+        aug_data = data
+        for tf in self.transforms:
+            aug_data = tf(aug_data)
+        return data, aug_data
