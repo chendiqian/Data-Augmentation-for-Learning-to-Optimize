@@ -1,5 +1,6 @@
 import torch
 from pytorch_metric_learning.losses import NTXentLoss
+from torch_scatter import scatter_mean
 
 from data.n_pair_loss import NPairLoss
 from data.utils import compute_acc
@@ -355,3 +356,62 @@ class IGSDPretrainer:
             corrects += (preds == labels).sum()
 
         return val_losses.item() / num_graphs, corrects.item() / num_graphs
+
+
+class GAEPretrainer:
+    def __init__(self):
+        self.best_val_loss = 1.e8
+        self.best_val_acc = 0.
+        self.patience = 0
+
+    def train(self, dataloader, model, optimizer):
+        model.train()
+
+        train_losses = 0.
+        num_graphs = 0
+        for i, data in enumerate(dataloader):
+            optimizer.zero_grad()
+            data = data.to(device)
+
+            vals, cons = model(data)
+            edge_index = data[('cons', 'to', 'vals')].edge_index
+            pred_edges = (vals[edge_index[1]] * cons[edge_index[0]]).sum(1)
+            target_edge_attr = data[('cons', 'to', 'vals')].edge_attr
+            loss = torch.nn.MSELoss(reduction='none')(pred_edges, target_edge_attr.squeeze(1))
+            edge_slice = data._slice_dict[('cons', 'to', 'vals')]['edge_index'].to(device)
+            nedges = edge_slice[1:] - edge_slice[:-1]
+            batch = torch.arange(data.num_graphs, device=device).repeat_interleave(nedges)
+            loss = scatter_mean(loss, batch, dim=0).mean()
+
+            train_losses += loss.detach() * data.num_graphs
+            num_graphs += data.num_graphs
+
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
+            optimizer.step()
+
+        return train_losses.item() / num_graphs, 0.
+
+    @torch.no_grad()
+    def eval(self, dataloader, model):
+        model.eval()
+
+        val_losses = 0.
+        num_graphs = 0
+        for i, data in enumerate(dataloader):
+            data = data.to(device)
+
+            vals, cons = model(data)
+            edge_index = data[('cons', 'to', 'vals')].edge_index
+            pred_edges = (vals[edge_index[1]] * cons[edge_index[0]]).sum(1)
+            target_edge_attr = data[('cons', 'to', 'vals')].edge_attr
+            loss = torch.nn.MSELoss(reduction='none')(pred_edges, target_edge_attr.squeeze(1))
+            edge_slice = data._slice_dict[('cons', 'to', 'vals')]['edge_index'].to(device)
+            nedges = edge_slice[1:] - edge_slice[:-1]
+            batch = torch.arange(data.num_graphs, device=device).repeat_interleave(nedges)
+            loss = scatter_mean(loss, batch, dim=0).mean()
+
+            val_losses += loss.detach() * data.num_graphs
+            num_graphs += data.num_graphs
+
+        return val_losses.item() / num_graphs, 0.
