@@ -1,5 +1,6 @@
 import torch
-from loss_func.mvgrl_l2g_loss import DualBranchContrast, JSD
+from loss_func.mvgrl_l2g_loss import DualBranchContrast
+from loss_func.pygcl_utils import JSD
 
 from utils.evaluation import compute_acc
 
