@@ -1,6 +1,8 @@
 import torch
 from loss_func.mvgrl_l2g_loss import DualBranchContrast, JSD
 
+from utils.evaluation import compute_acc
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -16,6 +18,7 @@ class MVGRLPretrainer:
 
         train_losses = 0.
         num_graphs = 0
+        corrects = 0
         for i, (anchor, aug) in enumerate(dataloader):
             optimizer.zero_grad()
 
@@ -33,7 +36,9 @@ class MVGRLPretrainer:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
             optimizer.step()
 
-        return train_losses.item() / num_graphs, 0.
+            corrects += compute_acc(g1, g2)
+
+        return train_losses.item() / num_graphs, corrects.item() / num_graphs
 
     @torch.no_grad()
     def eval(self, dataloader, model):
@@ -41,6 +46,7 @@ class MVGRLPretrainer:
 
         val_losses = 0.
         num_graphs = 0
+        corrects = 0
         for i, (anchor, aug) in enumerate(dataloader):
             n1, n2, g1, g2 = model(anchor, aug)
             vals_nnodes = (anchor['vals'].ptr[1:] - anchor['vals'].ptr[:-1]).to(device)
@@ -52,4 +58,6 @@ class MVGRLPretrainer:
             val_losses += loss.detach() * anchor.num_graphs
             num_graphs += anchor.num_graphs
 
-        return val_losses.item() / num_graphs, 0.
+            corrects += compute_acc(g1, g2)
+
+        return val_losses.item() / num_graphs, corrects.item() / num_graphs
