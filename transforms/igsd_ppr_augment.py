@@ -11,6 +11,10 @@ class IGSDPageRankAugment:
         self.alpha = 0.2
 
     def __call__(self, data: HeteroData) -> HeteroData:
+        # we allow no augmentation!
+        if self.strength == 0.:
+            return data
+
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         ne = data['cons', 'to', 'vals'].edge_index.shape[1]
 
