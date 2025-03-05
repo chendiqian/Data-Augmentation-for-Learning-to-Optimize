@@ -18,3 +18,21 @@ conda install -y -c conda-forge qpsolvers
 # for larger problems you need a license, please visit https://www.gurobi.com/ for more information
 pip install gurobipy
 ```
+
+## Baselines
+
+GraphCL: node, edge, mask, graph level CL
+
+GCC: rw subgraph, graph level CL
+
+InfoGraph: global-local MI, no augmentation. GAN like loss
+
+IGSD: distillation, teacher-student, PPR augmentation. the loss is consistence loss. There's a predictor, minimize the corresponding L2 distance z1 <-> z2', z2 <-> z1'
+
+GAE: reconstruct edges
+
+Todos:
+
+MVGRL: identity and PPR augmentation. Global-Local level MI
+
+DGI?
