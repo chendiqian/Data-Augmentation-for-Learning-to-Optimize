@@ -31,7 +31,7 @@ finetune:
 
 pretrain:
   method:
-    GCCSubgraph:
+    RWSubgraph:
       walk_length: 100
 
   lr: 1.e-3

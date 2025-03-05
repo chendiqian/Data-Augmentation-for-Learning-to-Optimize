@@ -17,7 +17,7 @@ from data.prefetch_generator import BackgroundGenerator
 from models.igsd_pretrain_gnn import IGSDPretrainGNN
 from trainers.igsd_pretrainer import IGSDPretrainer
 from transforms.gcn_norm import GCNNormDumb
-from transforms.igsd_ppr_augment import IGSDPageRankAugment
+from transforms.ppr_augment import PageRankAugment
 from transforms.wrapper import AnchorAugmentWrapper
 from utils.experiment import save_run_config, setup_wandb
 
@@ -34,7 +34,7 @@ def average_weights(weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.T
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    aug_list = [IGSDPageRankAugment(args.pretrain.method.IGSDPageRankAugment.strength)]
+    aug_list = [PageRankAugment(args.pretrain.method.PageRankAugment.strength)]
     transform = [AnchorAugmentWrapper(aug_list)]
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:

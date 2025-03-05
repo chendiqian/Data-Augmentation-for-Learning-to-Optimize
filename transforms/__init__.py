@@ -4,8 +4,8 @@ from transforms.lp_preserve import (DropInactiveConstraint,
                                     ScaleConstraint, ScaleObj,
                                     AddOrthogonalConstraint,
                                     AddDumbVariables)
-from transforms.gcc_subgraph import GCCSubgraph
-from transforms.igsd_ppr_augment import IGSDPageRankAugment
+from transforms.rw_subgraph import RWSubgraph
+from transforms.ppr_augment import PageRankAugment
 
 
 # priority, the smaller, the higher
@@ -16,10 +16,10 @@ TRANSFORM_CODEBOOK = {
     GraphCLPerturbEdge: 0,
 
     # GCC:
-    GCCSubgraph: 0,
+    RWSubgraph: 0,
 
     # IGSD:
-    IGSDPageRankAugment: 0,
+    PageRankAugment: 0,
 
     # ours
     AddDumbVariables: 3,
@@ -33,9 +33,9 @@ __all__ = [
     'GraphCLMaskNode',
     'GraphCLPerturbEdge',
 
-    'GCCSubgraph',
+    'RWSubgraph',
 
-    'IGSDPageRankAugment',
+    'PageRankAugment',
 
     'AddRedundantConstraint',
     'AddDumbVariables',

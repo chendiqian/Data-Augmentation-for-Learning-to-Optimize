@@ -3,7 +3,10 @@ from torch_geometric.data import HeteroData
 from torch_geometric.utils import bipartite_subgraph, to_undirected, degree
 
 
-class GCCSubgraph:
+class RWSubgraph:
+    """
+    RW subgraph, for GCC baseline
+    """
     def __init__(self, walk_length=100):
         self.walk_length = walk_length
 

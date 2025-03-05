@@ -5,7 +5,10 @@ from torch_geometric.data import HeteroData
 from torch_geometric.utils import to_dense_adj, to_undirected
 
 
-class IGSDPageRankAugment:
+class PageRankAugment:
+    """
+    PPR graph diffusion, for IGSD the distillation method, and MVGRL
+    """
     def __init__(self, strength=0.3):
         self.strength = strength
         self.alpha = 0.2

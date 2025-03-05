@@ -32,7 +32,7 @@ finetune:
 pretrain:
   method:
     # this is the only augmentation
-    IGSDPageRankAugment:
+    PageRankAugment:
       strength: 0.5
 
   lr: 1.e-3
