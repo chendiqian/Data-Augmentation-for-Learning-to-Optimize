@@ -1,0 +1,43 @@
+wandb:
+  project: default
+  name: ''
+  enable: False
+
+debug: false
+datapath: /work/log1/chendi.qian/ssl/gen_50_100_0.1
+runs: 1
+losstype: l2
+ckpt: false
+
+backbone:
+  conv: sageconv
+  hidden: 128
+  num_encode_layers: 3
+  num_conv_layers: 3
+  num_mlp_layers: 1
+  num_pred_layers: 2
+  norm: graphnorm
+
+finetune:
+  lr: 1.e-3
+  weight_decay: 0.
+  epoch: 1000
+  patience: 200
+  batchsize: 128
+  train_frac: 0.01
+  modelpath: null
+  whole: true
+  num_pred_layers: 1
+
+pretrain:
+  method:
+    GCCSubgraph:
+      walk_length: 100
+
+  lr: 1.e-3
+  weight_decay: 0.
+  epoch: 200
+  patience: 50
+  batchsize: 256
+  temperature: 0.1
+  num_pred_layers: 0  # no projector

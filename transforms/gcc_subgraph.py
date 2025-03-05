@@ -4,8 +4,7 @@ from torch_geometric.utils import bipartite_subgraph, to_undirected, degree
 
 
 class GCCSubgraph:
-    def __init__(self, strength=1., walk_length=100):
-        assert strength > 0.
+    def __init__(self, walk_length=100):
         self.walk_length = walk_length
 
     def __call__(self, data: HeteroData) -> HeteroData:
