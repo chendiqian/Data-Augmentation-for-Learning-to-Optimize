@@ -5,23 +5,7 @@ from torch.nn import functional as F
 from torch_geometric.nn import MLP
 
 from models.backbone import Backbone
-
-
-class EMA:
-    def __init__(self, beta):
-        super().__init__()
-        self.beta = beta
-
-    def update_average(self, old, new):
-        if old is None:
-            return new
-        return old * self.beta + (1 - self.beta) * new
-
-
-def update_moving_average(ema_updater, ma_model, current_model):
-    for current_params, ma_params in zip(current_model.parameters(), ma_model.parameters()):
-        old_weight, up_weight = ma_params.data, current_params.data
-        ma_params.data = ema_updater.update_average(old_weight, up_weight)
+from utils.models import EMA, update_moving_average
 
 
 class IGSDPretrainGNN(torch.nn.Module):
@@ -39,7 +23,7 @@ class IGSDPretrainGNN(torch.nn.Module):
         # their default
         self.ema_updater = EMA(0.99)
 
-        self.online_encoder = Backbone(
+        self.encoder1 = Backbone(
             conv,
             hid_dim,
             num_encode_layers,
@@ -48,19 +32,19 @@ class IGSDPretrainGNN(torch.nn.Module):
             backbone_pred_layers,
             norm,
         )
-        self.target_encoder = copy.deepcopy(self.online_encoder)
+        self.encoder2 = copy.deepcopy(self.encoder1)
 
         assert num_pred_layers > 0  # IGSD must have a predictor
         self.predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
 
     def forward(self, data, ppr_data):
         # encoder + projector
-        online_embedding, *_ = self.online_encoder(data)
+        online_embedding, *_ = self.encoder1(data)
         with torch.no_grad():
             # encoder + projector
-            target_embedding, *_ = self.target_encoder(ppr_data)
+            target_embedding, *_ = self.encoder2(ppr_data)
             # update weights
-            update_moving_average(self.ema_updater, self.target_encoder, self.online_encoder)
+            update_moving_average(self.ema_updater, self.encoder2, self.encoder1)
 
         online_z = self.predictor(online_embedding)
         target_z = self.predictor(target_embedding)
