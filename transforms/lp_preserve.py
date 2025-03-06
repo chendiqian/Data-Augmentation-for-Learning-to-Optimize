@@ -12,6 +12,26 @@ from torch_sparse import SparseTensor
 
 # Todo: change some existing constraints
 
+def active_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c):
+    # normalize first, but not in-place, as we want to scale the constraints
+    Amax = scatter_max(c2v_edge_attr.abs(), c2v_edge_index[0])[0]
+    scalars = torch.maximum(Amax, b.abs())
+    As = c2v_edge_attr / scalars[c2v_edge_index[0]]
+    bs = b / scalars
+
+    # low ones are likely to be active
+    heur = scatter_sum(As * c[c2v_edge_index[1]], c2v_edge_index[0]) + bs
+    return heur
+
+
+def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=1.e-6):
+    violations = scatter_sum(c2v_edge_attr * solution[c2v_edge_index[1]], c2v_edge_index[0]) - b
+    active_mask = violations.abs() < eps
+    inactive_mask = ~active_mask
+    inactive_idx = torch.where(inactive_mask)[0]
+    return inactive_idx
+
+
 class OracleDropInactiveConstraint:
     """
     Drop definitely inactive constraints
@@ -28,13 +48,10 @@ class OracleDropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        x = data.x_solution
-        A = data[('cons', 'to', 'vals')].edge_attr.squeeze()
-        edge_index = data[('cons', 'to', 'vals')].edge_index
-        violations = scatter_sum(A * x[edge_index[1]], edge_index[0]) - data.b
-        active_mask = violations.abs() < 1.e-6
-        inactive_mask = ~active_mask
-        inactive_idx = torch.where(inactive_mask)[0].numpy()
+        inactive_idx = oracle_inactive_constraints(data.x_solution,
+                                                   data[('cons', 'to', 'vals')].edge_index,
+                                                   data[('cons', 'to', 'vals')].edge_attr.squeeze(),
+                                                   data.b).numpy()
 
         dropped_cons = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
         remain_cons = ~np.isin(np.arange(m), dropped_cons)
@@ -84,17 +101,10 @@ class DropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        edge_index = data[('cons', 'to', 'vals')].edge_index
-        # normalize first, but not in-place, as we want to scale the constraints
-        Amax = scatter_max(data[('cons', 'to', 'vals')].edge_attr.squeeze().abs(), edge_index[0])[0]
-        bmax = data.b.abs()
-        scalars = torch.maximum(Amax, bmax)
-        As = data[('cons', 'to', 'vals')].edge_attr.squeeze() / scalars[edge_index[0]]
-        bs = data.b / scalars
-        cs = data.q
+        heur = active_contraint_heuristic(data[('cons', 'to', 'vals')].edge_index,
+                                          data[('cons', 'to', 'vals')].edge_attr.squeeze(),
+                                          data.b, data.q)
 
-        # low ones are likely to be active
-        heur = scatter_sum(As * cs[edge_index[1]], edge_index[0]) + bs
         # numerical stability
         heur -= heur.max()
         prob = torch.softmax(heur / self.temperature, dim=0).numpy()
