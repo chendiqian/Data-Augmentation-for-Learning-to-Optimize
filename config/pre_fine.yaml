@@ -33,6 +33,8 @@ pretrain:
   method:
     DropInactiveConstraint:
       strength: 0.
+    OracleDropInactiveConstraint:
+      strength: 0.
     ScaleConstraint:
       strength: 0.
     ScaleObj:

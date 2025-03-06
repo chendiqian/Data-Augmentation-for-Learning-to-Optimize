@@ -6,32 +6,38 @@ import torch
 from scipy import sparse as sp
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import bipartite_subgraph
-from torch_scatter import scatter_sum
+from torch_scatter import scatter_sum, scatter_max
 from torch_sparse import SparseTensor
 
 
 # Todo: change some existing constraints
 
-class DropInactiveConstraint:
+class OracleDropInactiveConstraint:
     """
-    Drop likely inactive constraints
+    Drop definitely inactive constraints
+    Just for testing, we should not use the ground truth solutions
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength=0.1):
+        assert 0 < strength < 1
+        self.p = strength
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        active_sort_idx = data.active_sort_idx.numpy()
-        z = np.arange(m) - m // 2
-        prob = 1 / (1 + np.exp(-z))
-        prob /= prob.sum()
-        dropped_cons = np.random.choice(active_sort_idx, size=int(m * self.p), replace=False, p=prob)
-        remain_cons = ~np.in1d(np.arange(m), dropped_cons)
+
+        x = data.x_solution
+        A = data[('cons', 'to', 'vals')].edge_attr.squeeze()
+        edge_index = data[('cons', 'to', 'vals')].edge_index
+        violations = scatter_sum(A * x[edge_index[1]], edge_index[0]) - data.b
+        active_mask = violations.abs() < 1.e-6
+        inactive_mask = ~active_mask
+        inactive_idx = torch.where(inactive_mask)[0].numpy()
+
+        dropped_cons = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
+        remain_cons = ~np.isin(np.arange(m), dropped_cons)
         remain_cons = torch.from_numpy(remain_cons)
 
         # modify cons 2 vals edge_index
@@ -57,6 +63,69 @@ class DropInactiveConstraint:
             q=data.q,
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
+            x_solution=data.x_solution
+        )
+        return new_data
+
+
+class DropInactiveConstraint:
+    """
+    Drop likely inactive constraints
+    """
+
+    def __init__(self, strength=0.1):
+        assert 0 < strength < 1
+        self.p = strength
+
+    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
+        raise NotImplementedError
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+
+        edge_index = data[('cons', 'to', 'vals')].edge_index
+        # normalize first, but not in-place, as we want to scale the constraints
+        Amax = scatter_max(data[('cons', 'to', 'vals')].edge_attr.squeeze().abs(), edge_index[0])[0]
+        bmax = data.b.abs()
+        scalars = torch.maximum(Amax, bmax)
+        As = data[('cons', 'to', 'vals')].edge_attr.squeeze() / scalars[edge_index[0]]
+        bs = data.b / scalars
+        cs = data.q
+
+        heur = scatter_sum(As * cs[edge_index[1]], edge_index[0]) + bs
+        active_sort_idx = torch.argsort(heur).numpy()
+
+        z = np.arange(m) - m // 2
+        prob = 1 / (1 + np.exp(-z))
+        prob /= prob.sum()
+        dropped_cons = np.random.choice(active_sort_idx, size=int(m * self.p), replace=False, p=prob)
+        remain_cons = ~np.isin(np.arange(m), dropped_cons)
+        remain_cons = torch.from_numpy(remain_cons)
+
+        # modify cons 2 vals edge_index
+        c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
+            subset=(remain_cons, torch.ones(n, dtype=torch.bool)),
+            edge_index=data[('cons', 'to', 'vals')].edge_index,
+            edge_attr=data[('cons', 'to', 'vals')].edge_attr,
+            relabel_nodes=True,
+            size=(m, n),
+            return_edge_mask=False)
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': remain_cons.sum(),
+                'x': data['cons'].x[remain_cons],
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
+            q=data.q,
+            b=data.b[remain_cons],
+            obj_solution=data.obj_solution,
+            x_solution=data.x_solution
         )
         return new_data
 
@@ -109,6 +178,7 @@ class AddRedundantConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
+            x_solution=data.x_solution
         )
         return new_data
 
@@ -150,6 +220,7 @@ class ScaleObj:
             q=data.q * scale,
             b=data.b,
             obj_solution=data.obj_solution * scale,
+            x_solution=data.x_solution
         )
         return new_data
 
@@ -200,6 +271,7 @@ class ScaleConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
+            x_solution=data.x_solution
         )
         return new_data
 
@@ -268,6 +340,7 @@ class AddOrthogonalConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
+            x_solution=data.x_solution
         )
         return new_data
 
@@ -312,5 +385,6 @@ class AddDumbVariables:
             q=torch.cat([data.q, torch.rand(num_new_vars)]),
             b=data.b,
             obj_solution=data.obj_solution,
+            x_solution=data.x_solution
         )
         return new_data

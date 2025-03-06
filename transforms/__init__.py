@@ -1,5 +1,6 @@
 from transforms.graph_cl import GraphCLDropNode, GraphCLMaskNode, GraphCLPerturbEdge
 from transforms.lp_preserve import (DropInactiveConstraint,
+                                    OracleDropInactiveConstraint,
                                     AddRedundantConstraint,
                                     ScaleConstraint, ScaleObj,
                                     AddOrthogonalConstraint,
@@ -22,10 +23,13 @@ TRANSFORM_CODEBOOK = {
     PageRankAugment: 0,
 
     # ours
-    AddDumbVariables: 3,
+    OracleDropInactiveConstraint: 100,
+    DropInactiveConstraint: 100,   # todo: experimental
+    AddDumbVariables: 4,
     AddRedundantConstraint: 2,
     ScaleConstraint: 1,
     ScaleObj: 1,
+    AddOrthogonalConstraint: 3,  # this after redundant cons, as this might introduce active constraints
 }
 
 __all__ = [
@@ -37,8 +41,11 @@ __all__ = [
 
     'PageRankAugment',
 
+    'OracleDropInactiveConstraint',
+    'DropInactiveConstraint',
     'AddRedundantConstraint',
     'AddDumbVariables',
+    'AddOrthogonalConstraint',
     'ScaleConstraint',
     'ScaleObj',
 ]
