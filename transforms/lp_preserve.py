@@ -210,9 +210,9 @@ class AddOrthogonalConstraint:
     where a.dot(c) = 0, b is large enough. This would not affect the results.
     """
 
-    def __init__(self, p):
-        assert 0 < p < 1
-        self.p = p
+    def __init__(self, strength=0.1):
+        assert 0 < strength < 1
+        self.p = strength
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError

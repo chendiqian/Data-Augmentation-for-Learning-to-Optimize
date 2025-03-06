@@ -31,13 +31,19 @@ finetune:
 
 pretrain:
   method:
+    DropInactiveConstraint:
+      strength: 0.
     ScaleConstraint:
-      strength: 1.
+      strength: 0.
     ScaleObj:
       strength: 0.
     AddRedundantConstraint:
-      strength: 0.5
+      strength: 0.
       affinity: 3
+    AddOrthogonalConstraint:
+      strength: 0.
+    AddDumbVariables:
+      strength: 0.
 
   lr: 1.e-3
   weight_decay: 0.
