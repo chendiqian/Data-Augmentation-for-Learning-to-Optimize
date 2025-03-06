@@ -73,9 +73,10 @@ class DropInactiveConstraint:
     Drop likely inactive constraints
     """
 
-    def __init__(self, strength=0.1):
+    def __init__(self, strength=0.1, temperature=1.):
         assert 0 < strength < 1
         self.p = strength
+        self.temperature = temperature
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
@@ -92,13 +93,11 @@ class DropInactiveConstraint:
         bs = data.b / scalars
         cs = data.q
 
+        # low ones are likely to be active
         heur = scatter_sum(As * cs[edge_index[1]], edge_index[0]) + bs
-        active_sort_idx = torch.argsort(heur).numpy()
+        prob = torch.softmax(heur / self.temperature, dim=0).numpy()
 
-        z = np.arange(m) - m // 2
-        prob = 1 / (1 + np.exp(-z))
-        prob /= prob.sum()
-        dropped_cons = np.random.choice(active_sort_idx, size=int(m * self.p), replace=False, p=prob)
+        dropped_cons = np.random.choice(np.arange(m), size=int(m * self.p), replace=False, p=prob)
         remain_cons = ~np.isin(np.arange(m), dropped_cons)
         remain_cons = torch.from_numpy(remain_cons)
 

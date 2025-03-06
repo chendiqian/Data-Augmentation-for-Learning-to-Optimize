@@ -33,6 +33,7 @@ pretrain:
   method:
     DropInactiveConstraint:
       strength: 0.
+      temperature: 1.
     OracleDropInactiveConstraint:
       strength: 0.
     ScaleConstraint:
