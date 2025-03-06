@@ -31,5 +31,8 @@ data_aug:
       affinity: 3
     ScaleConstraint:
       strength: 1.
+    # We should make full use of the labels
+    OracleDropInactiveConstraint:
+      strength: 0.3
 
 num_pred_layers: 1
