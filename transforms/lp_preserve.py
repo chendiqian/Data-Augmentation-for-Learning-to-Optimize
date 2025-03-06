@@ -147,7 +147,13 @@ class AddRedundantConstraint:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         num_new_cons = int(m * self.p)
         eye_mat = sp.eye_array(m, format='csr')
-        rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
+        # rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
+
+        rows = np.arange(num_new_cons).repeat(self.affinity)
+        cols = np.random.randint(low=0, high=m, size=self.affinity * num_new_cons)
+        values = np.random.rand(self.affinity * num_new_cons)
+        rand_mat = sp.csr_array((values, (rows, cols)), shape=(num_new_cons, m))
+
         mat = sp.vstack([eye_mat, rand_mat])
 
         edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
