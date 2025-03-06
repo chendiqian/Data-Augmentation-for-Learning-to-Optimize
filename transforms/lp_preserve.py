@@ -95,6 +95,8 @@ class DropInactiveConstraint:
 
         # low ones are likely to be active
         heur = scatter_sum(As * cs[edge_index[1]], edge_index[0]) + bs
+        # numerical stability
+        heur -= heur.max()
         prob = torch.softmax(heur / self.temperature, dim=0).numpy()
 
         dropped_cons = np.random.choice(np.arange(m), size=int(m * self.p), replace=False, p=prob)
