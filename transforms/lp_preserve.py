@@ -335,10 +335,10 @@ class ScaleCoordinate:
         return new_data
 
 
-class AddOrthogonalConstraint:
+class AddSubOrthogonalConstraint:
     """
     Add constraint ax <= b
-    where a.dot(c) = 0, b is large enough. This would not affect the results.
+    where a.dot(c) >= 0, b is large enough. This would not affect the results.
     """
 
     def __init__(self, strength=0.1):
@@ -359,7 +359,9 @@ class AddOrthogonalConstraint:
             col = np.vstack([np.sort(np.random.choice(n, sparsity, replace=False)) for _ in range(num_new)])
             col = torch.from_numpy(col).long()
             free_values = torch.randn(num_new, sparsity - 1)
-            last_values = -(c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1) / c[col[:, -1]]
+            # so that each A @ c = rand > 0
+            last_values = ((torch.rand(num_new) - (c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1))
+                           / c[col[:, -1]])
             values = torch.cat([free_values, last_values[:, None]], dim=1)
             values /= values.max(dim=1, keepdim=True).values
             return row, col.reshape(-1), values.reshape(-1)
@@ -372,13 +374,8 @@ class AddOrthogonalConstraint:
 
         # a heuristic, we need a large enough b so that not to violate current feasible region
         # ideally we should narrow the bounds of all the variables and get an upper bound of b, but that's hard
-        # if c_i is large, the solution x_i is probably small
         assert data.q.min() >= 0.
-        extra_b = extra_data * (
-            torch.where(extra_data > 0,
-                        torch.clamp(1. / (data.q + 1.e-7), max=5.)[extra_col],
-                        0)
-        )
+        extra_b = extra_data * (torch.where(extra_data > 0, 3, 0))
         extra_b = scatter_sum(extra_b, extra_row, dim=0)
         new_b = torch.cat([data.b, extra_b], dim=0)
         extra_edge_index = torch.vstack([extra_row + m, extra_col])

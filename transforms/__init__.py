@@ -3,7 +3,7 @@ from transforms.lp_preserve import (DropInactiveConstraint,
                                     OracleDropInactiveConstraint,
                                     AddRedundantConstraint,
                                     ScaleConstraint, ScaleObj, ScaleCoordinate,
-                                    AddOrthogonalConstraint,
+                                    AddSubOrthogonalConstraint,
                                     AddDumbVariables)
 from transforms.rw_subgraph import RWSubgraph
 from transforms.ppr_augment import PageRankAugment
@@ -30,5 +30,5 @@ TRANSFORM_CODEBOOK = {
     ScaleConstraint: 1,
     ScaleObj: 1,
     ScaleCoordinate: 1,
-    AddOrthogonalConstraint: 3,  # this after redundant cons, as this might introduce active constraints
+    AddSubOrthogonalConstraint: 3,  # this after redundant cons, as this might introduce active constraints
 }

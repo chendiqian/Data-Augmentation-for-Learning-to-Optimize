@@ -45,7 +45,7 @@ pretrain:
     AddRedundantConstraint:
       strength: 0.
       affinity: 3
-    AddOrthogonalConstraint:
+    AddSubOrthogonalConstraint:
       strength: 0.
     AddDumbVariables:
       strength: 0.
