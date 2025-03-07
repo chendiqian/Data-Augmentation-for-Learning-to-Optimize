@@ -436,7 +436,7 @@ class AddDumbVariables:
             },
             vals={
                 'num_nodes': n + num_new_vars,
-                'x': torch.empty(m + num_new_vars),
+                'x': torch.empty(n + num_new_vars),
             },
             cons__to__vals={'edge_index': torch.hstack([data[('cons', 'to', 'vals')].edge_index, extra_edge_index]),
                             'edge_attr': torch.vstack([data[('cons', 'to', 'vals')].edge_attr, extra_edge_attr])},
