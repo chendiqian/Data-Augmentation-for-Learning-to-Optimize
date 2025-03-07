@@ -17,8 +17,9 @@ from utils.experiment import save_run_config, setup_wandb
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    aug_list = [PageRankAugment(args.pretrain.method.PageRankAugment.strength)]
-    transform = [AnchorAugmentWrapper(aug_list)]
+    transform = [AnchorAugmentWrapper(
+        PageRankAugment(args.pretrain.method.PageRankAugment.strength)
+    )]
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNormDumb())

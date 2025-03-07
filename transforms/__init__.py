@@ -22,13 +22,15 @@ TRANSFORM_CODEBOOK = {
     # IGSD:
     PageRankAugment: 0,
 
-    # ours
+    # ours, oracle, for supervised learning
     OracleDropInactiveConstraint: 100,
-    DropInactiveConstraint: 100,   # todo: experimental
-    AddDumbVariables: 4,
-    AddRedundantConstraint: 2,
+
+    # ours, heuristic
     ScaleConstraint: 1,
     ScaleObj: 1,
     ScaleCoordinate: 1,
-    AddSubOrthogonalConstraint: 3,  # this after redundant cons, as this might introduce active constraints
+    AddSubOrthogonalConstraint: 2,
+    AddRedundantConstraint: 2,
+    DropInactiveConstraint: 2,
+    AddDumbVariables: 3,
 }
