@@ -40,6 +40,8 @@ pretrain:
       strength: 0.
     ScaleObj:
       strength: 0.
+    ScaleCoordinate:
+      strength: 0.
     AddRedundantConstraint:
       strength: 0.
       affinity: 3

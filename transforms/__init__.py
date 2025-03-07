@@ -2,7 +2,7 @@ from transforms.graph_cl import GraphCLDropNode, GraphCLMaskNode, GraphCLPerturb
 from transforms.lp_preserve import (DropInactiveConstraint,
                                     OracleDropInactiveConstraint,
                                     AddRedundantConstraint,
-                                    ScaleConstraint, ScaleObj,
+                                    ScaleConstraint, ScaleObj, ScaleCoordinate,
                                     AddOrthogonalConstraint,
                                     AddDumbVariables)
 from transforms.rw_subgraph import RWSubgraph
@@ -29,23 +29,6 @@ TRANSFORM_CODEBOOK = {
     AddRedundantConstraint: 2,
     ScaleConstraint: 1,
     ScaleObj: 1,
+    ScaleCoordinate: 1,
     AddOrthogonalConstraint: 3,  # this after redundant cons, as this might introduce active constraints
 }
-
-__all__ = [
-    'GraphCLDropNode',
-    'GraphCLMaskNode',
-    'GraphCLPerturbEdge',
-
-    'RWSubgraph',
-
-    'PageRankAugment',
-
-    'OracleDropInactiveConstraint',
-    'DropInactiveConstraint',
-    'AddRedundantConstraint',
-    'AddDumbVariables',
-    'AddOrthogonalConstraint',
-    'ScaleConstraint',
-    'ScaleObj',
-]
