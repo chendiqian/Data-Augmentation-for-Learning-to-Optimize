@@ -17,8 +17,8 @@ train_frac: 1.
 
 backbone:
   conv: sageconv
-  hidden: 128
-  num_encode_layers: 3
+  hidden: 256
+  num_encode_layers: 6
   num_conv_layers: 3
   num_mlp_layers: 1
   num_pred_layers: 2
