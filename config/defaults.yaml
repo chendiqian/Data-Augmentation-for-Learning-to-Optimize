@@ -1,0 +1,19 @@
+wandb:
+  project: default
+  name: ''
+  enable: False
+
+debug: false
+datapath: /work/log1/chendi.qian/qp_400_new
+runs: 1
+losstype: l2
+ckpt: false
+
+backbone:
+  conv: sageconv
+  hidden: 256
+  num_encode_layers: 6
+  num_conv_layers: 3
+  num_mlp_layers: 1
+  num_pred_layers: 2
+  norm: graphnorm

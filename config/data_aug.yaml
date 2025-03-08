@@ -1,13 +1,3 @@
-wandb:
-  project: default
-  name: ''
-  enable: False
-
-debug: false
-datapath: /work/log1/chendi.qian/qp_400_new
-runs: 1
-losstype: l2
-ckpt: false
 lr: 1.e-3
 weight_decay: 0.
 epoch: 1000

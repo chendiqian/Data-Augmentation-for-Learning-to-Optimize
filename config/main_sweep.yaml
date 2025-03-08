@@ -1,12 +1,12 @@
 program: run.py
 method: bayes
-project: main_50_100
+project: main_100_200
 run_cap: 30
 entity: chendiqian
 
 metric:
   goal: minimize
-  name: test_obj_gap_mean
+  name: best_val_obj_gap
 parameters:
   wandb.enable:
     value: true
@@ -14,16 +14,16 @@ parameters:
   debug:
     value: false
   datapath:
-    value: /work/log1/chendi.qian/ssl/gen_50_100_0.1
+    value: /work/log1/chendi.qian/ssl/gen_100200_100200_0.05
   runs:
-    value: 3
+    value: 1
   losstype:
     value: l2
   ckpt:
     value: false
 
   lr:
-    values: [1.e-4, 1.e-3]
+    value: 1.e-3
   weight_decay:
     value: 0.
   epoch:
@@ -31,18 +31,18 @@ parameters:
   patience:
     value: 100
   batchsize:
-    values: [128, 256, 512]
+    value: 128
   train_frac:
     value: 1.
 
   backbone.conv:
     value: sageconv
   backbone.hidden:
-    value: 128
+    values: [128, 256, 192]
   backbone.num_encode_layers:
-    values: [1, 2, 3]
+    values: [2, 3]
   backbone.num_conv_layers:
-    values: [2, 3, 4]
+    values: [3, 4, 5, 6, 8]
   backbone.num_pred_layers:
     values: [2, 3]
   backbone.num_mlp_layers:
