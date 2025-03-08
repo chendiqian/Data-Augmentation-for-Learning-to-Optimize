@@ -4,7 +4,7 @@ finetune:
   epoch: 1000
   patience: 200
   batchsize: 128
-  train_frac: 0.01
+  train_frac: 1.
   modelpath: null
   whole: true
   num_pred_layers: 1
@@ -12,7 +12,7 @@ finetune:
 pretrain:
   method:
     DropInactiveConstraint:
-      strength: 0.3
+      strength: 0.1
       temperature: 1.
 #    OracleDropInactiveConstraint:
 #      strength: 0.
