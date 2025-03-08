@@ -16,3 +16,6 @@ pretrain:
   patience: 50
   batchsize: 256
   num_pred_layers: 0  # no projector
+
+defaults:
+  - defaults

@@ -26,3 +26,6 @@ data_aug:
       strength: 0.3
 
 num_pred_layers: 1
+
+defaults:
+  - defaults

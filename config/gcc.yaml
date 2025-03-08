@@ -21,3 +21,6 @@ pretrain:
   batchsize: 256
   temperature: 0.1
   num_pred_layers: 0  # no projector
+
+defaults:
+  - defaults

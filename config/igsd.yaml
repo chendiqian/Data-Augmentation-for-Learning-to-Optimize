@@ -22,3 +22,6 @@ pretrain:
   batchsize: 256
   temperature: 0.1
   num_pred_layers: 2  # this is fixed
+
+defaults:
+  - defaults
