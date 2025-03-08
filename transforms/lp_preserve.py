@@ -68,7 +68,7 @@ class OracleDropInactiveConstraint:
 
         new_data = data.__class__(
             cons={
-                'num_nodes': remain_cons.sum(),
+                'num_nodes': remain_cons.sum().item(),
                 'x': data['cons'].x[remain_cons],
             },
             vals={
@@ -124,7 +124,7 @@ class DropInactiveConstraint:
 
         new_data = data.__class__(
             cons={
-                'num_nodes': remain_cons.sum(),
+                'num_nodes': remain_cons.sum().item(),
                 'x': data['cons'].x[remain_cons],
             },
             vals={
