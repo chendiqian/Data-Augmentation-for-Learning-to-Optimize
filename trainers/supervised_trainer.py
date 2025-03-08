@@ -4,16 +4,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class PlainGNNTrainer:
-    def __init__(self, loss_type):
+    def __init__(self):
         self.best_objgap = 1.e8
         self.patience = 0
-        self.loss_type = loss_type
-        if loss_type == 'l2':
-            self.loss_func = torch.nn.MSELoss(reduction='mean')
-        elif loss_type == 'l1':
-            self.loss_func = torch.nn.L1Loss(reduction='mean')
-        else:
-            raise ValueError
+        self.loss_func = torch.nn.MSELoss(reduction='mean')
 
     def train_step(self, data, label, model, optimizer):
         optimizer.zero_grad()

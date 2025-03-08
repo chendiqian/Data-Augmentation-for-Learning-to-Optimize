@@ -25,9 +25,9 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     if 'gcn' in args.backbone.conv:
         transform.append(GCNNormDumb())
     transform = Compose(transform)
-    train_set = LPDataset(args.datapath, 'train', transform=transform)
-    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
-    if args.debug:
+    train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
+    valid_set = LPDataset(args.exp.datapath, 'valid', transform=transform)
+    if args.exp.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
 
@@ -61,7 +61,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = NTXentPretrainer(args.pretrain.temperature)
 
-    best_model = pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.ckpt,
+    best_model = pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
                                               run_id, log_folder_name,
                                               trainer, train_loader, val_loader, device, model, optimizer, scheduler)
     return best_model
@@ -72,7 +72,7 @@ def main(args: DictConfig):
     log_folder_name = save_run_config(args)
     setup_wandb(args)
 
-    for run in range(args.runs):
+    for run in range(args.exp.runs):
         pretrain(args, log_folder_name, run)
 
 

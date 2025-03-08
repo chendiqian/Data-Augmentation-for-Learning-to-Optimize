@@ -19,12 +19,12 @@ from utils.experiment import save_run_config, setup_wandb
 
 def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pretrained_state_dict=None):
     transform = GCNNorm() if 'gcn' in args.backbone.conv else None
-    train_set = LPDataset(args.datapath, 'train', transform=transform)
+    train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
     if args.finetune.train_frac < 1:
         train_set = train_set[:int(len(train_set) * args.finetune.train_frac)]
-    valid_set = LPDataset(args.datapath, 'valid', transform=transform)
-    test_set = LPDataset(args.datapath, 'test', transform=transform)
-    if args.debug:
+    valid_set = LPDataset(args.exp.datapath, 'valid', transform=transform)
+    test_set = LPDataset(args.exp.datapath, 'test', transform=transform)
+    if args.exp.debug:
         train_set = train_set[:20]
         valid_set = valid_set[:20]
         test_set = test_set[:20]
@@ -54,7 +54,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
                     backbone_pred_layers=args.backbone.num_pred_layers,
                     norm=args.backbone.norm).to(device)
         model.encoder.load_state_dict(pretrained_state_dict)
-        trainer = PlainGNNTrainer(args.losstype)
+        trainer = PlainGNNTrainer()
     else:
         model = Backbone(
             conv=args.backbone.conv,
@@ -90,7 +90,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 
         model = MLP([args.backbone.hidden] * args.finetune.num_pred_layers + [1], norm=None).to(device)
 
-        trainer = LinearTrainer(args.losstype)
+        trainer = LinearTrainer()
 
     optimizer = optim.Adam(model.parameters(), lr=args.finetune.lr, weight_decay=args.finetune.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -99,7 +99,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
                                                      patience=100,
                                                      min_lr=1.e-5)
 
-    best_model = supervised_train_eval_loops(args.finetune.epoch, args.finetune.patience, args.ckpt,
+    best_model = supervised_train_eval_loops(args.finetune.epoch, args.finetune.patience, args.exp.ckpt,
                                              run_id, log_folder_name,
                                              trainer, train_loader, val_loader, device, model, optimizer, scheduler)
 
@@ -117,7 +117,7 @@ def main(args: DictConfig):
     best_val_objgaps = []
     test_objgaps = []
 
-    for run in range(args.runs):
+    for run in range(args.exp.runs):
         assert args.finetune.modelpath is not None
         state_dict = torch.load(args.finetune.modelpath, map_location=device)
         best_model, val_obj, test_obj = finetune(args, log_folder_name, run, state_dict)

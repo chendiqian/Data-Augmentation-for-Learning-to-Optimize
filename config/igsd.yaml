@@ -1,13 +1,6 @@
 finetune:
-  lr: 1.e-3
-  weight_decay: 0.
-  epoch: 1000
-  patience: 200
-  batchsize: 128
-  train_frac: 0.01
   modelpath: null
   whole: true
-  num_pred_layers: 1
 
 pretrain:
   method:
@@ -15,13 +8,11 @@ pretrain:
     PageRankAugment:
       strength: 0.5
 
-  lr: 1.e-3
-  weight_decay: 0.
-  epoch: 200
-  patience: 50
-  batchsize: 256
-  temperature: 0.1
   num_pred_layers: 2  # this is fixed
 
 defaults:
-  - defaults
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - default_pretrain
+  - _self_

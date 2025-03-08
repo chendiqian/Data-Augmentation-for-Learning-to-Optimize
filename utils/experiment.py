@@ -13,7 +13,7 @@ def sync_timer():
 
 
 def save_run_config(args: DictConfig):
-    if args.ckpt:
+    if args.exp.ckpt:
         if not os.path.isdir('logs'):
             os.mkdir('logs')
         prefix = f'{args.wandb.project}_{args.wandb.name}'

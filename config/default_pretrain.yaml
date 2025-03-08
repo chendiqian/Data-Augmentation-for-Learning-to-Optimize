@@ -1,0 +1,8 @@
+pretrain:
+  lr: 1.e-3
+  weight_decay: 0.
+  epoch: 200
+  patience: 50
+  batchsize: 256
+  temperature: 0.1
+  num_pred_layers: 0  # no projector

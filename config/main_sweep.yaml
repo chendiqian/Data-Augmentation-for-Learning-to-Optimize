@@ -17,8 +17,6 @@ parameters:
     value: /work/log1/chendi.qian/ssl/gen_100200_100200_0.05
   runs:
     value: 1
-  losstype:
-    value: l2
   ckpt:
     value: false
 

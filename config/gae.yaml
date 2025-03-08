@@ -1,21 +1,10 @@
 finetune:
-  lr: 1.e-3
-  weight_decay: 0.
-  epoch: 1000
-  patience: 200
-  batchsize: 128
-  train_frac: 0.01
   modelpath: null
   whole: true
-  num_pred_layers: 1
-
-pretrain:
-  lr: 1.e-3
-  weight_decay: 0.
-  epoch: 200
-  patience: 50
-  batchsize: 256
-  num_pred_layers: 0  # no projector
 
 defaults:
-  - defaults
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - default_pretrain
+  - _self_

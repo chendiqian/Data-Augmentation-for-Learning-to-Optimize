@@ -1,0 +1,10 @@
+wandb:
+  project: default
+  name: ''
+  enable: False
+
+exp:
+  debug: false
+  datapath: /work/log1/chendi.qian/qp_400_new
+  runs: 1
+  ckpt: false

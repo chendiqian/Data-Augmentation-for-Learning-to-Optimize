@@ -16,7 +16,7 @@ def main(args: DictConfig):
     best_val_objgaps = []
     test_objgaps = []
 
-    for run in range(args.runs):
+    for run in range(args.exp.runs):
         pretrained_model = pretrain(args, log_folder_name, run)
         finetuned_model, val_obj, test_obj = finetune(args, log_folder_name, run, pretrained_model)
 
