@@ -26,11 +26,11 @@ TRANSFORM_CODEBOOK = {
     OracleDropInactiveConstraint: 100,
 
     # ours, heuristic
-    ScaleConstraint: 1,
-    ScaleObj: 1,
-    ScaleCoordinate: 1,
-    AddSubOrthogonalConstraint: 2,
-    AddRedundantConstraint: 2,
-    DropInactiveConstraint: 2,
-    AddDumbVariables: 3,
+    ScaleConstraint: 2,
+    ScaleObj: 2,
+    ScaleCoordinate: 2,
+    AddSubOrthogonalConstraint: 1,
+    AddRedundantConstraint: 1,
+    DropInactiveConstraint: 1,
+    AddDumbVariables: 3,  # !this must be after scaling!
 }
