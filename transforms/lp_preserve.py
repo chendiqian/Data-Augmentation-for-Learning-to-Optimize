@@ -6,22 +6,33 @@ import torch
 from scipy import sparse as sp
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import bipartite_subgraph
-from torch_scatter import scatter_sum, scatter_max
+from torch_scatter import scatter_sum
 from torch_sparse import SparseTensor
 
 
-# Todo: change some existing constraints
+def active_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c, m, n):
+    row, col = c2v_edge_index
+    values = c2v_edge_attr
 
-def active_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c):
-    # normalize first, but not in-place, as we want to scale the constraints
-    Amax = scatter_max(c2v_edge_attr.abs(), c2v_edge_index[0])[0]
-    scalars = torch.maximum(Amax, b.abs())
-    As = c2v_edge_attr / scalars[c2v_edge_index[0]]
-    bs = b / scalars
+    Anorms = scatter_sum(values ** 2, row).numpy() ** 0.5
+    c = c.numpy()
+    c = c / np.linalg.norm(c)
 
-    # low ones are likely to be active
-    heur = scatter_sum(As * c[c2v_edge_index[1]], c2v_edge_index[0]) + bs
-    return heur
+    row, col = row.numpy(), col.numpy()
+    values = values.numpy()
+
+    # we assume each row, col is selected at least once
+    A = sp.csr_array((values / Anorms[row], (row, col)), shape=(m, n))
+    A = sp.vstack([A, -sp.eye_array(n, format='csr')])
+    b = np.hstack([b.numpy() / Anorms, np.zeros(n)])
+
+    heur = A @ c + b
+
+    heur_idx = np.argsort(heur)
+    heur_idx = heur_idx[n:]
+    heur_idx = heur_idx[heur_idx < m]
+
+    return heur_idx
 
 
 def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=1.e-6):
@@ -90,10 +101,9 @@ class DropInactiveConstraint:
     Drop likely inactive constraints
     """
 
-    def __init__(self, strength=0.1, temperature=1.):
+    def __init__(self, strength=0.1):
         assert 0 < strength < 1
         self.p = strength
-        self.temperature = temperature
 
     def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
         raise NotImplementedError
@@ -101,15 +111,11 @@ class DropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        heur = active_contraint_heuristic(data[('cons', 'to', 'vals')].edge_index,
-                                          data[('cons', 'to', 'vals')].edge_attr.squeeze(),
-                                          data.b, data.q)
+        heur_idx = active_contraint_heuristic(data[('cons', 'to', 'vals')].edge_index,
+                                              data[('cons', 'to', 'vals')].edge_attr.squeeze(),
+                                              data.b, data.q, m, n)
 
-        # numerical stability
-        heur -= heur.max()
-        prob = torch.softmax(heur / self.temperature, dim=0).numpy()
-
-        dropped_cons = np.random.choice(np.arange(m), size=int(m * self.p), replace=False, p=prob)
+        dropped_cons = np.random.choice(heur_idx, size=min(int(m * self.p), len(heur_idx)), replace=False)
         remain_cons = ~np.isin(np.arange(m), dropped_cons)
         remain_cons = torch.from_numpy(remain_cons)
 
@@ -214,7 +220,6 @@ class ScaleObj:
         raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
-
         # scales = abs(1 + N(0, 1) * exp(p - 1))
 
         noise_scale = math.exp(self.p) - 1.
@@ -360,7 +365,8 @@ class AddSubOrthogonalConstraint:
             col = torch.from_numpy(col).long()
             free_values = torch.randn(num_new, sparsity - 1)
             # so that each A @ c = rand > 0
-            last_values = ((torch.rand(num_new) - (c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1))
+            last_values = ((torch.rand(num_new) - (
+                        c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1))
                            / c[col[:, -1]])
             values = torch.cat([free_values, last_values[:, None]], dim=1)
             values /= values.max(dim=1, keepdim=True).values
