@@ -1,6 +1,6 @@
 backbone:
   conv: sageconv
-  hidden: 256
+  hidden: 192
   num_encode_layers: 2
   num_conv_layers: 6
   num_mlp_layers: 1
