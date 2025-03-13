@@ -59,7 +59,7 @@ def pretraining_train_eval_loops(epochs, patience,
             trainer.best_val_loss = val_loss
             best_model = copy.deepcopy(model.encoder.state_dict())
             if ckpt:
-                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
+                torch.save(model.state_dict(), os.path.join(log_folder_name, f'pretrain_best_model{run_id}.pt'))
         else:
             trainer.patience += 1
 
@@ -117,7 +117,7 @@ def siamese_pretraining_train_eval_loops(epochs, patience,
             trainer.best_val_loss = val_loss
             best_model = average_weights([model.encoder1.state_dict(), model.encoder2.state_dict()])
             if ckpt:
-                torch.save(best_model, os.path.join(log_folder_name, f'best_model{run_id}.pt'))
+                torch.save(best_model, os.path.join(log_folder_name, f'pretrain_best_model{run_id}.pt'))
         else:
             trainer.patience += 1
 
