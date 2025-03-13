@@ -11,8 +11,8 @@ class NTXentPretrainer:
     For graph level contrastive, where we have 2N views of the graph batch
     """
     def __init__(self, temperature):
-        self.best_val_loss = 1.e8
-        self.best_val_acc = 0.
+        self.best_loss = 1.e8
+        self.best_acc = 0.
         self.patience = 0
         self.loss_func = NTXentLoss(temperature=temperature)
 

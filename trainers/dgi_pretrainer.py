@@ -7,8 +7,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class DGIPretrainer:
     def __init__(self):
-        self.best_val_loss = 1.e8
-        self.best_val_acc = 0.
+        self.best_loss = 1.e8
+        self.best_acc = 0.
         self.patience = 0
         self.loss_func = SingleBranchContrast(JSD(), 'G2L')
 

@@ -11,7 +11,7 @@ from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
 from models.infonce_pretrain_gnn import PretrainGNN
 from trainers.ntxent_pretrainer import NTXentPretrainer
-from trainers.training_loops import pretraining_train_eval_loops
+from trainers.training_loops import pretraining_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.wrapper import ComboAugmentWrapper
 
@@ -26,10 +26,8 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         transform.append(GCNNormDumb())
     transform = Compose(transform)
     train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
-    valid_set = LPDataset(args.exp.datapath, 'valid', transform=transform)
     if args.exp.debug:
         train_set = train_set[:20]
-        valid_set = valid_set[:20]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     collate_fn = collate_pos_pair
@@ -37,10 +35,6 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                               batch_size=args.pretrain.batchsize,
                               shuffle=True,
                               collate_fn=collate_fn)
-    val_loader = DataLoader(valid_set,
-                            batch_size=args.pretrain.batchsize,
-                            shuffle=False,
-                            collate_fn=collate_fn)
 
     model = PretrainGNN(
         conv=args.backbone.conv,
@@ -61,9 +55,9 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = NTXentPretrainer(args.pretrain.temperature)
 
-    best_model = pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
-                                              run_id, log_folder_name,
-                                              trainer, train_loader, val_loader, device, model, optimizer, scheduler)
+    best_model = pretraining_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
+                                   run_id, log_folder_name,
+                                   trainer, train_loader, device, model, optimizer, scheduler)
     return best_model
 
 

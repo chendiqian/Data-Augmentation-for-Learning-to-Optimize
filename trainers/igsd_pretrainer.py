@@ -5,8 +5,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class IGSDPretrainer:
     def __init__(self, temperature):
-        self.best_val_loss = 1.e8
-        self.best_val_acc = 0.
+        self.best_loss = 1.e8
+        self.best_acc = 0.
         self.patience = 0
         self.temperature = temperature
         self.loss_func = torch.nn.CrossEntropyLoss()

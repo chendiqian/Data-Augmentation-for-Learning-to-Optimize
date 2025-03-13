@@ -42,21 +42,20 @@ def supervised_train_eval_loops(epochs, patience,
     return best_model
 
 
-def pretraining_train_eval_loops(epochs, patience,
-                                 ckpt, run_id, log_folder_name,
-                                 trainer, train_loader, val_loader, device, model, optimizer, scheduler):
+def pretraining_loops(epochs, patience,
+                      ckpt, run_id, log_folder_name,
+                      trainer, train_loader, device, model, optimizer, scheduler):
     pbar = tqdm(range(epochs))
     best_model = copy.deepcopy(model.encoder.state_dict())
     for epoch in pbar:
         train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
-        val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
         if scheduler is not None:
-            scheduler.step(val_loss)
+            scheduler.step(train_loss)
 
-        if trainer.best_val_loss > val_loss:
+        if trainer.best_loss > train_loss:
             trainer.patience = 0
-            trainer.best_val_loss = val_loss
+            trainer.best_loss = train_loss
             best_model = copy.deepcopy(model.encoder.state_dict())
             if ckpt:
                 torch.save(model.encoder.state_dict(), os.path.join(log_folder_name, f'pretrain_best_model{run_id}.pt'))
@@ -69,10 +68,8 @@ def pretraining_train_eval_loops(epochs, patience,
         if trainer.patience > patience:
             break
 
-        stats_dict = {'pretrain_train_loss': train_loss,
-                      'pretrain_train_acc': train_acc,
-                      'pretrain_val_loss': val_loss,
-                      'pretrain_val_acc': val_acc,
+        stats_dict = {'pretrain_loss': train_loss,
+                      'pretrain_acc': train_acc,
                       'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
 
         pbar.set_postfix(stats_dict)
@@ -80,9 +77,9 @@ def pretraining_train_eval_loops(epochs, patience,
     return best_model
 
 
-def siamese_pretraining_train_eval_loops(epochs, patience,
-                                 ckpt, run_id, log_folder_name,
-                                 trainer, train_loader, val_loader, device, model, optimizer, scheduler):
+def siamese_pretraining_loops(epochs, patience,
+                              ckpt, run_id, log_folder_name,
+                              trainer, train_loader, device, model, optimizer, scheduler):
     """
     This is for some pretraining, where at the end the two pretraining nets are merged to give a final model
     e.g. IGSD the distillation, teacher and student nets
@@ -96,7 +93,6 @@ def siamese_pretraining_train_eval_loops(epochs, patience,
         log_folder_name:
         trainer:
         train_loader:
-        val_loader:
         device:
         model:
         optimizer:
@@ -110,14 +106,13 @@ def siamese_pretraining_train_eval_loops(epochs, patience,
     best_model = average_weights([model.encoder1.state_dict(), model.encoder2.state_dict()])
     for epoch in pbar:
         train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
-        val_loss, val_acc = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
 
         if scheduler is not None:
-            scheduler.step(val_loss)
+            scheduler.step(train_loss)
 
-        if trainer.best_val_loss > val_loss:
+        if trainer.best_loss > train_loss:
             trainer.patience = 0
-            trainer.best_val_loss = val_loss
+            trainer.best_loss = train_loss
             best_model = average_weights([model.encoder1.state_dict(), model.encoder2.state_dict()])
             if ckpt:
                 torch.save(best_model, os.path.join(log_folder_name, f'pretrain_best_model{run_id}.pt'))
@@ -127,10 +122,8 @@ def siamese_pretraining_train_eval_loops(epochs, patience,
         if trainer.patience > patience:
             break
 
-        stats_dict = {'pretrain_train_loss': train_loss,
-                      'pretrain_train_acc': train_acc,
-                      'pretrain_val_loss': val_loss,
-                      'pretrain_val_acc': val_acc,
+        stats_dict = {'pretrain_loss': train_loss,
+                      'pretrain_acc': train_acc,
                       'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
 
         pbar.set_postfix(stats_dict)

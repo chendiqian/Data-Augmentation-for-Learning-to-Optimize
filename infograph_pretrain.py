@@ -9,7 +9,7 @@ from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
 from models.infograph_pretrain_gnn import InfoGraphPretrainGNN
 from trainers.infograph_pretrainer import InfoGraphPretrainer
-from trainers.training_loops import pretraining_train_eval_loops
+from trainers.training_loops import pretraining_loops
 from transforms.gcn_norm import GCNNorm
 
 
@@ -17,10 +17,8 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # for infograph, we train the graph embedding to be consistent with node embedding, no augmentation!
     transform = GCNNorm() if 'gcn' in args.backbone.conv else None
     train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
-    valid_set = LPDataset(args.exp.datapath, 'valid', transform=transform)
     if args.exp.debug:
         train_set = train_set[:20]
-        valid_set = valid_set[:20]
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     collate_fn = collate_fn_lp_base
@@ -28,10 +26,6 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                               batch_size=args.pretrain.batchsize,
                               shuffle=True,
                               collate_fn=collate_fn)
-    val_loader = DataLoader(valid_set,
-                            batch_size=args.pretrain.batchsize,
-                            shuffle=False,
-                            collate_fn=collate_fn)
 
     model = InfoGraphPretrainGNN(
         conv=args.backbone.conv,
@@ -53,9 +47,9 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = InfoGraphPretrainer()
 
-    best_model = pretraining_train_eval_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
-                                              run_id, log_folder_name,
-                                              trainer, train_loader, val_loader, device, model, optimizer, scheduler)
+    best_model = pretraining_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
+                                   run_id, log_folder_name,
+                                   trainer, train_loader, device, model, optimizer, scheduler)
     return best_model
 
 
