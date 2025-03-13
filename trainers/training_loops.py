@@ -63,6 +63,9 @@ def pretraining_train_eval_loops(epochs, patience,
         else:
             trainer.patience += 1
 
+        if ckpt and epoch % 100 == 99:
+            torch.save(model.state_dict(), os.path.join(log_folder_name, f'pretrain_model_epoch{epoch}.pt'))
+
         if trainer.patience > patience:
             break
 
