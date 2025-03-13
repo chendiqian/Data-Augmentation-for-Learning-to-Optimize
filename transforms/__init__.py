@@ -22,9 +22,6 @@ TRANSFORM_CODEBOOK = {
     # IGSD:
     PageRankAugment: 0,
 
-    # ours, oracle, for supervised learning
-    OracleDropInactiveConstraint: 100,
-
     # ours, heuristic
     ScaleConstraint: 2,
     ScaleObj: 2,
@@ -32,5 +29,6 @@ TRANSFORM_CODEBOOK = {
     AddSubOrthogonalConstraint: 1,
     AddRedundantConstraint: 1,
     DropInactiveConstraint: 1,
+    OracleDropInactiveConstraint: 1,
     AddDumbVariables: 3,  # !this must be after scaling!
 }
