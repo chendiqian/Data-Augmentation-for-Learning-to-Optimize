@@ -8,39 +8,6 @@ from torch_geometric.utils import bipartite_subgraph
 from torch_scatter import scatter_sum
 
 
-def active_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c, m, n):
-    row, col = c2v_edge_index
-    values = c2v_edge_attr
-
-    Anorms = scatter_sum(values ** 2, row).numpy() ** 0.5
-    c = c.numpy()
-    c = c / np.linalg.norm(c)
-
-    row, col = row.numpy(), col.numpy()
-    values = values.numpy()
-
-    # we assume each row, col is selected at least once
-    A = sp.csr_array((values / Anorms[row], (row, col)), shape=(m, n))
-    A = sp.vstack([A, -sp.eye_array(n, format='csr')])
-    b = np.hstack([b.numpy() / Anorms, np.zeros(n)])
-
-    heur = A @ c + b
-
-    heur_idx = np.argsort(heur)
-    heur_idx = heur_idx[n:]
-    heur_idx = heur_idx[heur_idx < m]
-
-    return heur_idx
-
-
-def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=1.e-6):
-    violations = scatter_sum(c2v_edge_attr * solution[c2v_edge_index[1]], c2v_edge_index[0]) - b
-    active_mask = violations.abs() < eps
-    inactive_mask = ~active_mask
-    inactive_idx = torch.where(inactive_mask)[0]
-    return inactive_idx
-
-
 class OracleDropInactiveConstraint:
     """
     Drop definitely inactive constraints
@@ -54,10 +21,8 @@ class OracleDropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        inactive_idx = oracle_inactive_constraints(data.x_solution,
-                                                   data[('cons', 'to', 'vals')].edge_index,
-                                                   data[('cons', 'to', 'vals')].edge_attr.squeeze(),
-                                                   data.b).numpy()
+        assert hasattr(data, 'inactive_idx')
+        inactive_idx = data.inactive_idx.numpy()
 
         dropped_cons = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
         remain_cons = ~np.isin(np.arange(m), dropped_cons)
@@ -86,7 +51,9 @@ class OracleDropInactiveConstraint:
             q=data.q,
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -103,9 +70,8 @@ class DropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        heur_idx = active_contraint_heuristic(data[('cons', 'to', 'vals')].edge_index,
-                                              data[('cons', 'to', 'vals')].edge_attr.squeeze(),
-                                              data.b, data.q, m, n)
+        assert hasattr(data, 'heur_idx')
+        heur_idx = data.heur_idx.numpy()
 
         dropped_cons = np.random.choice(heur_idx, size=min(int(m * self.p), len(heur_idx)), replace=False)
         remain_cons = ~np.isin(np.arange(m), dropped_cons)
@@ -134,7 +100,9 @@ class DropInactiveConstraint:
             q=data.q,
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -190,7 +158,9 @@ class AddRedundantConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -228,7 +198,9 @@ class ScaleObj:
             q=data.q * scale,
             b=data.b,
             obj_solution=data.obj_solution * scale,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -271,7 +243,9 @@ class ScaleConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -313,7 +287,9 @@ class ScaleCoordinate:
             q=data.q * scales,
             b=data.b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -377,7 +353,9 @@ class AddSubOrthogonalConstraint:
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
 
@@ -422,6 +400,8 @@ class AddDumbVariables:
             q=torch.cat([data.q, torch.rand(num_new_vars)]),
             b=data.b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution
+            x_solution=data.x_solution,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
         )
         return new_data
