@@ -1,4 +1,3 @@
-from typing import Tuple, List
 import math
 
 import numpy as np
@@ -52,9 +51,6 @@ class OracleDropInactiveConstraint:
         assert 0 < strength < 1
         self.p = strength
 
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
-
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
@@ -104,9 +100,6 @@ class DropInactiveConstraint:
         assert 0 < strength < 1
         self.p = strength
 
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
-
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
@@ -155,9 +148,6 @@ class AddRedundantConstraint:
         assert 0 < strength < 1
         self.p = strength
         self.affinity = affinity
-
-    def neg(self, data: HeteroData, negatives: int) -> List[HeteroData]:
-        raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -215,9 +205,6 @@ class ScaleObj:
         assert strength > 0.
         self.p = strength
 
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
-
     def __call__(self, data: HeteroData) -> HeteroData:
         # scales = abs(1 + N(0, 1) * exp(p - 1))
 
@@ -256,9 +243,6 @@ class ScaleConstraint:
         assert strength > 0
         # we scale all the constraints, but with variable strength
         self.p = strength
-
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
@@ -344,9 +328,6 @@ class AddSubOrthogonalConstraint:
         assert 0 < strength < 1
         self.p = strength
 
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
-
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
@@ -409,9 +390,6 @@ class AddDumbVariables:
     def __init__(self, strength=0.1):
         assert 0 < strength < 1
         self.p = strength
-
-    def neg(self, data: HeteroData, negatives: int) -> Tuple[HeteroData]:
-        raise NotImplementedError
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
