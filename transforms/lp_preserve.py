@@ -7,7 +7,6 @@ from scipy import sparse as sp
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import bipartite_subgraph
 from torch_scatter import scatter_sum
-from torch_sparse import SparseTensor
 
 
 def active_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c, m, n):
@@ -264,11 +263,6 @@ class ScaleConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
-        A = SparseTensor(row=data[('cons', 'to', 'vals')].edge_index[0],
-                         col=data[('cons', 'to', 'vals')].edge_index[1],
-                         value=data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
-                         sparse_sizes=(m, n), is_sorted=True, trust_data=True)
-
         # scales = abs(1 + N(0, 1) * exp(p - 1))
         noise_scale = math.exp(self.p) - 1.
         # 0. -> 0., 1. -> 1.73
@@ -276,9 +270,9 @@ class ScaleConstraint:
         noise = torch.randn(m) * noise_scale
         scales = (noise + torch.ones_like(noise)).abs()
 
-        A = A * scales[:, None]
         new_b = data.b * scales
 
+        edge_index = data[('cons', 'to', 'vals')].edge_index
         new_data = data.__class__(
             cons={
                 'num_nodes': m,
@@ -288,8 +282,8 @@ class ScaleConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            cons__to__vals={'edge_index': torch.vstack([A.storage.row(), A.storage.col()]),
-                            'edge_attr': A.storage.value()[:, None]},
+            cons__to__vals={'edge_index': edge_index,
+                            'edge_attr': data[('cons', 'to', 'vals')].edge_attr * scales[edge_index[0], None]},
             q=data.q,
             b=new_b,
             obj_solution=data.obj_solution,
