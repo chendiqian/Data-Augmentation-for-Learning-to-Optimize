@@ -396,9 +396,12 @@ class AddDumbVariables:
 
         num_new_vars = int(n * self.p)
         density = data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n)
-        rand_mat = sp.random_array((m, num_new_vars), density=density, format='coo')
-        extra_edge_index = torch.from_numpy(np.vstack([rand_mat.row, rand_mat.col])).long()
-        extra_edge_index[1] += n
+
+        selected_idx = np.sort(np.random.choice(num_new_vars * m, int(num_new_vars * m * density), replace=False))
+        new_row = selected_idx // num_new_vars
+        new_col = selected_idx % num_new_vars + n
+
+        extra_edge_index = torch.from_numpy(np.vstack([new_row, new_col])).long()
 
         # Todo: maybe not rand, but -1 0 +1 for some class of LP
         # much be positive, otherwise would relax the constraints and might change the solution
