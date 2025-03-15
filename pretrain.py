@@ -14,12 +14,17 @@ from trainers.ntxent_pretrainer import NTXentPretrainer
 from trainers.training_loops import pretraining_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.wrapper import ComboAugmentWrapper
+from transforms.lp_preserve import CombinedDualViewAugmentations
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    aug_list = [getattr(transforms, aug_class)(**kwargs)
-                for aug_class, kwargs in args.pretrain.method.items() if kwargs.strength > 0.]
-    transform = [ComboAugmentWrapper(aug_list)]
+    # aug_list = [getattr(transforms, aug_class)(**kwargs)
+    #             for aug_class, kwargs in args.pretrain.method.items() if kwargs.strength > 0.]
+    # transform = [ComboAugmentWrapper(aug_list)]
+    kwargs = dict()
+    for class_name, kw in args.pretrain.method.items():
+        kwargs[class_name.lower()] = kw.strength
+    transform = [CombinedDualViewAugmentations(**kwargs)]
 
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
