@@ -5,7 +5,7 @@ from omegaconf import DictConfig
 
 from utils.experiment import save_run_config, setup_wandb
 from finetune import finetune
-from pretrain import pretrain  # it shares the normal infonce pretrain
+from graphcl_pretrain import pretrain  # it shares the normal infonce pretrain
 
 
 @hydra.main(version_base=None, config_path='./config', config_name="graphcl")
