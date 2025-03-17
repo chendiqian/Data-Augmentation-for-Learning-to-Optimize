@@ -7,7 +7,15 @@ from torch_geometric.data import HeteroData
 from . import TRANSFORM_CODEBOOK
 
 
-def sort_transforms(transforms: List):
+def sort_transforms_lists(transforms: List):
+    """
+    Sort the transforms list, and merge the ones with the same priority
+    Args:
+        transforms:
+
+    Returns:
+
+    """
     priors = [TRANSFORM_CODEBOOK[tf.__class__] for tf in transforms]
     priors = np.unique(priors)
     prior_reorder_dict = {num: i for i, num in enumerate(priors)}
@@ -19,6 +27,19 @@ def sort_transforms(transforms: List):
         reordered_prior = prior_reorder_dict[prior]
         prioritized_tf_lists[reordered_prior].append(tf)
     return prioritized_tf_lists
+
+
+def sort_transforms(transforms: List):
+    """
+    Sort the transforms list
+    Args:
+        transforms:
+
+    Returns:
+
+    """
+    sorted_tfs = sorted(transforms, key=lambda tf: TRANSFORM_CODEBOOK[tf.__class__])
+    return sorted_tfs
 
 
 class SingleAugmentWrapper:
@@ -48,10 +69,10 @@ class ComboAugmentWrapper:
 
     def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
         d1 = d2 = data
-        for tf_list in self.transforms:
-            tf1, tf2 = random.choices(tf_list, k=2)
-            d1 = tf1(d1)
-            d2 = tf2(d2)
+        for tf in self.transforms:
+            # tf1, tf2 = random.choices(tf_list, k=2)
+            d1 = tf(d1)
+            d2 = tf(d2)
         return d1, d2
 
 
