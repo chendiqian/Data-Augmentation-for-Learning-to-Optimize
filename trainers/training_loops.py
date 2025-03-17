@@ -10,7 +10,7 @@ from utils.models import average_weights
 
 
 def supervised_train_eval_loops(epochs, patience,
-                                ckpt, run_id, log_folder_name,
+                                ckpt, run_id, fold_id, log_folder_name,
                                 trainer, train_loader, val_loader, device, model, optimizer, scheduler):
     pbar = tqdm(range(epochs))
     best_model = copy.deepcopy(model.state_dict())
@@ -26,7 +26,7 @@ def supervised_train_eval_loops(epochs, patience,
             trainer.best_objgap = val_obj_gap
             best_model = copy.deepcopy(model.state_dict())
             if ckpt:
-                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}.pt'))
+                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}_{fold_id}.pt'))
         else:
             trainer.patience += 1
 

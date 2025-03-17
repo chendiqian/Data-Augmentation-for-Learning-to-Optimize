@@ -68,7 +68,7 @@ def main(args: DictConfig):
         trainer = PlainGNNTrainer()
 
         best_model = supervised_train_eval_loops(args.finetune.epoch, args.finetune.patience, args.exp.ckpt,
-                                                 run,  log_folder_name,
+                                                 run, 0, log_folder_name,
                                                  trainer, train_loader, val_loader, device, model, optimizer, scheduler)
 
         best_val_objgaps.append(trainer.best_objgap)
