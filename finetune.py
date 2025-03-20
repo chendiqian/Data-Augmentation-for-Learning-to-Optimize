@@ -1,3 +1,5 @@
+import os
+
 import hydra
 import numpy as np
 import torch
@@ -134,9 +136,13 @@ def main(args: DictConfig):
     best_val_objgaps = []
     test_objgaps = []
 
-    for run in range(args.exp.runs):
-        assert args.finetune.modelpath is not None
-        state_dict = torch.load(args.finetune.modelpath, map_location=device)
+    assert args.finetune.modelpath is not None
+
+    model_dicts = os.listdir(args.finetune.modelpath)
+    model_dicts = [m for m in model_dicts if m.startswith('pretrain') and m.endswith('.pt')]
+
+    for run, model_dict in enumerate(model_dicts):
+        state_dict = torch.load(os.path.join(args.finetune.modelpath, model_dict), map_location=device)
         val_obj, test_obj = finetune(args, log_folder_name, run, state_dict)
 
         best_val_objgaps.append(val_obj)
