@@ -6,11 +6,11 @@ pretrain:
   epoch: 500
   method:
     GraphCLDropNode:
-      strength: 0.47
+      strength: 0.2
     GraphCLPerturbEdge:
-      strength: 0.32
+      strength: 0.1
     GraphCLMaskNode:
-      strength: 0.12
+      strength: 0.13
 
 defaults:
   - default_exp
