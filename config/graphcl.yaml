@@ -3,14 +3,14 @@ finetune:
   whole: true
 
 pretrain:
-  epoch: 200
+  epoch: 500
   method:
     GraphCLDropNode:
-      strength: 0.15
+      strength: 0.47
     GraphCLPerturbEdge:
-      strength: 0.15
+      strength: 0.32
     GraphCLMaskNode:
-      strength: 0.15
+      strength: 0.12
 
 defaults:
   - default_exp

@@ -5,7 +5,7 @@ finetune:
 pretrain:
   method:
     RWSubgraph:
-      walk_length: 100
+      walk_length: 50
 
 defaults:
   - default_exp
