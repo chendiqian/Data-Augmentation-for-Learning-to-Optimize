@@ -26,16 +26,7 @@ pip install gurobipy
 ### GraphCL
 Graph level contrast. See the [paper](https://proceedings.neurips.cc/paper/2020/file/3fe230348e9a12c13120749e3f9fa4cd-Paper.pdf) and the official [repo](https://github.com/Shen-Lab/GraphCL), as well as the usage example [GraphCL](https://github.com/PyGCL/PyGCL/blob/main/examples/GraphCL.py)
 
-Best hyperparams
-
-| Method\strength | Node | Edge | Mask |
-|-----------------|------|------|------|
-| Node            | 0.3  | -    | -    |
-| Edge            | -    | 0.2  | -    |
-| Mask            | -    | -    | 0.5  |
-| Combination     | 0.15 | 0.15 | 0.15 |
-
-Example code: `python graphcl.py exp.datapath=PATH2DATASET pretrain.method.GraphCLDropNode.strength=0.15 pretrain.method.GraphCLPerturbEdge.strength=0.15 pretrain.method.GraphCLMaskNode.strength=0.15`
+Example code: `python graphcl.py exp.datapath=PATH2DATASET pretrain.method.GraphCLDropNode.strength=0.1 pretrain.method.GraphCLPerturbEdge.strength=0.1 pretrain.method.GraphCLMaskNode.strength=0.1`
 
 GCC: rw subgraph, graph level CL
 
