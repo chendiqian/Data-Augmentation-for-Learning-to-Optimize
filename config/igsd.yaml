@@ -6,7 +6,7 @@ pretrain:
   method:
     # this is the only augmentation
     PageRankAugment:
-      strength: 0.05
+      strength: 0.01
 
   num_pred_layers: 2  # this is fixed
 
