@@ -1,26 +1,28 @@
 finetune:
   modelpath: null
   whole: true
+  folds: 10
 
 pretrain:
+  epoch: 800
   method:
     DropInactiveConstraint:
-      strength: 0.1
+      strength: 0.046
 #    OracleDropInactiveConstraint:
 #      strength: 0.
     ScaleConstraint:
-      strength: 1.
+      strength: 0.4
 #    ScaleObj:
 #      strength: 0.
     ScaleCoordinate:
-      strength: 1.
+      strength: 1.07
     AddRedundantConstraint:
-      strength: 0.3
+      strength: 0.36
       affinity: 3
     AddSubOrthogonalConstraint:
-      strength: 0.3
+      strength: 0.
     AddDumbVariables:
-      strength: 0.3
+      strength: 0.46
 
 defaults:
   - default_exp
