@@ -24,6 +24,10 @@ class HeteroConv(torch.nn.Module):
                               ('cons_vals',),]
         self.sync_conv = sync_conv
 
+    def reset_parameters(self):
+        self.convs['vals_cons'].reset_parameters()
+        self.convs['cons_vals'].reset_parameters()
+
     def forward(
             self,
             x_dict: Dict[NodeType, torch.FloatTensor],
