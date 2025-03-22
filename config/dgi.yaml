@@ -2,6 +2,9 @@ finetune:
   modelpath: null
   whole: true
 
+pretrain:
+  batchsize: 128
+
 defaults:
   - default_exp
   - default_backbone
