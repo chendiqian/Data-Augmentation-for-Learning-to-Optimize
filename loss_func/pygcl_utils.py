@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from torch.nn import functional as F
-from torch_scatter import scatter
 
 
 class Loss(ABC):
@@ -90,8 +89,12 @@ class CrossScaleSampler(Sampler):
             sample = torch.cat([sample, neg_sample], dim=0)         # 2N * K
         else:
             assert batch is not None
-            ones = torch.eye(num_nodes, dtype=torch.float32, device=device)     # N * N
-            pos_mask = scatter(ones, batch, dim=0, reduce='sum')                # M * N
+            # ones = torch.eye(num_nodes, dtype=torch.float32, device=device)     # N * N
+            # pos_mask = scatter(ones, batch, dim=0, reduce='sum')                # M * N
+
+            pos_mask = torch.zeros(num_graphs, num_nodes, dtype=torch.float, device=device)
+            arange_nnodes = torch.arange(num_nodes, device=device)
+            pos_mask[batch, arange_nnodes] = 1.
 
         neg_mask = 1. - pos_mask
         return anchor, sample, pos_mask, neg_mask
