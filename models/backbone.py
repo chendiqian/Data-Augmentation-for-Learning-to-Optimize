@@ -56,6 +56,13 @@ class Backbone(torch.nn.Module):
         else:
             self.fc_obj = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
 
+    def reset_parameters(self):
+        self.b_encoder.reset_parameters()
+        self.q_encoder.reset_parameters()
+        for g in self.gcns:
+            g.reset_parameters()
+        self.fc_obj.reset_parameters()
+
     def init_embedding(self, data):
         batch_dict: Dict[NodeType, torch.LongTensor] = data.batch_dict
         edge_index_dict: Dict[EdgeType, torch.LongTensor] = data.edge_index_dict
