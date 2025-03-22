@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from torch_geometric.nn import MLP
 
@@ -27,16 +29,10 @@ class MVGRLPretrainGNN(torch.nn.Module):
             output_nodes=True,
         )
 
-        self.encoder2 = Backbone(
-            conv,
-            hid_dim,
-            num_encode_layers,
-            num_conv_layers,
-            num_mlp_layers,
-            backbone_pred_layers,
-            norm,
-            output_nodes=True,
-        )
+        # copy, so that to keep the computation graph
+        self.encoder2 = copy.deepcopy(self.encoder1)
+        # in place
+        self.encoder2.reset_parameters()
         # according to the paper, the GNN is not shared, but the MLP is shared
         self.encoder2.fc_obj = self.encoder1.fc_obj
 
