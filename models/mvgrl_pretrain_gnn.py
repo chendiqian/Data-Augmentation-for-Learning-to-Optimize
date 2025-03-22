@@ -47,12 +47,9 @@ class MVGRLPretrainGNN(torch.nn.Module):
         else:
             self.fc_nodes = MLP([hid_dim] * (backbone_pred_layers + 1), norm=None)
 
-        if num_pred_layers == 0:
-            self.predictor = torch.nn.Identity()
-            self.node_predictor = torch.nn.Identity()
-        else:
-            self.predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
-            self.node_predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
+        assert num_pred_layers > 0  # must have a predictor
+        self.predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
+        self.node_predictor = MLP([hid_dim] * (num_pred_layers + 1), norm=None)
 
     def forward(self, anchor_data, aug_data):
         obj_embedding1, x_dict1 = self.encoder1(anchor_data)
