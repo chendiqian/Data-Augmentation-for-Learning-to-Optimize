@@ -49,16 +49,14 @@ class SingleAugmentWrapper:
 
     def __init__(self, transforms: List):
         self.max_strength_dict = {tf: tf.p for tf in transforms}
-        sorted_transforms = sorted(transforms, key=lambda tf: TRANSFORM_CODEBOOK[tf.__class__])
-        self.transforms = sorted_transforms
+        sorted_transforms_lists = sort_transforms(transforms)
+        self.transforms = sorted_transforms_lists
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        raise NotImplementedError
         for tf_class in self.transforms:
             max_rate = self.max_strength_dict[tf_class]
             tf_class.p = random.random() * max_rate
             data = tf_class(data)
-
         return data
 
 
