@@ -66,7 +66,7 @@ class GraphCLPerturbEdge:
         c2v_edge_attr = data[('cons', 'to', 'vals')].edge_attr[edge_mask, :]
 
         # add edges
-        added_edge_index = add_random_edge(edge_index, p=self.p, num_nodes=(m, n))[1]
+        added_edge_index = add_random_edge(edge_index, p=self.p, num_nodes=(m, n))[1].long()
         added_edge_attr = torch.randn(added_edge_index.shape[1], 1)
 
         new_data = data.__class__(
