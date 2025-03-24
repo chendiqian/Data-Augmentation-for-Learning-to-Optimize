@@ -22,6 +22,24 @@ def recover_lp_from_data(data, dtype=np.float32):
     return A, c, b, lb, ub
 
 
+def recover_qp_from_data(data, dtype=np.float32):
+    data = data.to('cpu')
+    c = data.q.numpy().astype(dtype)
+    b = data.b.numpy().astype(dtype)
+    A = SparseTensor(row=data['cons', 'to', 'vals'].edge_index[0],
+                     col=data['cons', 'to', 'vals'].edge_index[1],
+                     value=data['cons', 'to', 'vals'].edge_attr.squeeze(),
+                     sparse_sizes=(data['cons'].num_nodes, data['vals'].num_nodes)).to_dense().numpy().astype(dtype)
+    P = SparseTensor(row=data['vals', 'to', 'vals'].edge_index[0],
+                     col=data['vals', 'to', 'vals'].edge_index[1],
+                     value=data['vals', 'to', 'vals'].edge_attr.squeeze(),
+                     sparse_sizes=(data['vals'].num_nodes, data['vals'].num_nodes)).to_dense().numpy().astype(dtype)
+    # todo: might vary
+    lb = np.zeros(A.shape[1]).astype(dtype)
+    ub = None
+    return P, A, c, b, lb, ub
+
+
 def normalize_cons(A, b):
     if A is None or b is None:
         return A, b
