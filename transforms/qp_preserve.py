@@ -45,7 +45,7 @@ class QPScaleCoordinate:
             cons__to__vals={'edge_index': data[('cons', 'to', 'vals')].edge_index,
                             'edge_attr': data[('cons', 'to', 'vals')].edge_attr * scales[Acols, None]},
             vals__to__vals={'edge_index': data[('vals', 'to', 'vals')].edge_index,
-                            'edge_attr': data[('cons', 'to', 'vals')].edge_attr * scales[Qcols, None] * scales[Qrows, None]},
+                            'edge_attr': data[('vals', 'to', 'vals')].edge_attr * scales[Qcols, None] * scales[Qrows, None]},
             q=data.q * scales,
             b=data.b,
             obj_solution=data.obj_solution,
