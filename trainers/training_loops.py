@@ -48,7 +48,7 @@ def pretraining_loops(epochs, patience,
     pbar = tqdm(range(epochs))
     best_model = copy.deepcopy(model.encoder.state_dict())
     for epoch in pbar:
-        train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+        train_loss, train_acc = trainer.train(train_loader, model, optimizer)
 
         if scheduler is not None:
             scheduler.step(train_loss)
