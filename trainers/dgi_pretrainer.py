@@ -19,6 +19,7 @@ class DGIPretrainer:
         num_graphs = 0
         for i, data in enumerate(dataloader):
             optimizer.zero_grad()
+            data = data.to(device)
 
             obj_embedding, node_embedding = model(data)
             vals_nnodes = (data['vals'].ptr[1:] - data['vals'].ptr[:-1]).to(device)
