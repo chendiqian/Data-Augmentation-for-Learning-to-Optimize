@@ -49,11 +49,13 @@ def main(args: DictConfig):
     val_loader = DataLoader(valid_set,
                             batch_size=args.finetune.batchsize,
                             shuffle=False,
-                            collate_fn=collate_fn_lp_base)
+                            collate_fn=collate_fn_lp_base,
+                            pin_memory=True)
     test_loader = DataLoader(test_set,
                              batch_size=args.finetune.batchsize,
                              shuffle=False,
-                             collate_fn=collate_fn_lp_base)
+                             collate_fn=collate_fn_lp_base,
+                             pin_memory=True)
 
     ndata_per_fold = int(len(train_set) * args.finetune.train_frac)
 
@@ -72,7 +74,8 @@ def main(args: DictConfig):
             train_loader = DataLoader(train_subset,
                                       batch_size=args.finetune.batchsize,
                                       shuffle=True,
-                                      collate_fn=collate_fn_lp_base)
+                                      collate_fn=collate_fn_lp_base,
+                                      num_workers=8, pin_memory=True, persistent_workers=True, prefetch_factor=4)
 
             model = GNN(conv=args.backbone.conv,
                         hid_dim=args.backbone.hidden,

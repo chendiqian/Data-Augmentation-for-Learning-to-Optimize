@@ -53,11 +53,13 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
     val_loader = DataLoader(valid_set,
                             batch_size=args.finetune.batchsize,
                             shuffle=False,
-                            collate_fn=collate_fn_lp_base)
+                            collate_fn=collate_fn_lp_base,
+                            pin_memory=True)
     test_loader = DataLoader(test_set,
                              batch_size=args.finetune.batchsize,
                              shuffle=False,
-                             collate_fn=collate_fn_lp_base)
+                             collate_fn=collate_fn_lp_base,
+                             pin_memory=True)
 
     ndata_per_fold = int(len(train_set) * args.finetune.train_frac)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -72,7 +74,8 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         train_loader = DataLoader(train_subset,
                                   batch_size=args.finetune.batchsize,
                                   shuffle=True,
-                                  collate_fn=collate_fn_lp_base)
+                                  collate_fn=collate_fn_lp_base,
+                                  pin_memory=True)
 
         if args.finetune.whole:
             # finetune the whole model

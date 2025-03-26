@@ -15,8 +15,8 @@ def supervised_train_eval_loops(epochs, patience,
     pbar = tqdm(range(epochs))
     best_model = copy.deepcopy(model.state_dict())
     for epoch in pbar:
-        train_loss = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
-        val_obj_gap = trainer.eval(BackgroundGenerator(val_loader, device, 4), model)
+        train_loss = trainer.train(train_loader, model, optimizer)
+        val_obj_gap = trainer.eval(val_loader, model)
 
         if scheduler is not None:
             scheduler.step(val_obj_gap)
