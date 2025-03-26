@@ -75,7 +75,7 @@ def main(args: DictConfig):
                                       batch_size=args.finetune.batchsize,
                                       shuffle=True,
                                       collate_fn=collate_fn_lp_base,
-                                      num_workers=8, pin_memory=True, persistent_workers=True, prefetch_factor=4)
+                                      pin_memory=True)
 
             model = GNN(conv=args.backbone.conv,
                         hid_dim=args.backbone.hidden,
