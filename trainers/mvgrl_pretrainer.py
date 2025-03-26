@@ -22,6 +22,8 @@ class MVGRLPretrainer:
         corrects = 0
         for i, (anchor, aug) in enumerate(dataloader):
             optimizer.zero_grad()
+            anchor = anchor.to(device)
+            aug = aug.to(device)
 
             n1, n2, g1, g2 = model(anchor, aug)
             vals_nnodes = (anchor['vals'].ptr[1:] - anchor['vals'].ptr[:-1]).to(device)
