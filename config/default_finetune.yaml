@@ -2,7 +2,7 @@ finetune:
   folds: 1
   lr: 1.e-3
   weight_decay: 0.
-  epoch: 1000
+  epoch: 2000
   patience: 200
   batchsize: 32
   train_frac: 1.
