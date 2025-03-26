@@ -4,6 +4,6 @@ finetune:
   weight_decay: 0.
   epoch: 1000
   patience: 200
-  batchsize: 128
+  batchsize: 32
   train_frac: 1.
   num_pred_layers: 1
