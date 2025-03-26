@@ -5,7 +5,6 @@ import torch
 import wandb
 from tqdm import tqdm
 
-from data.prefetch_generator import BackgroundGenerator
 from utils.models import average_weights
 
 
@@ -105,7 +104,7 @@ def siamese_pretraining_loops(epochs, patience,
     # the best is the mean of 2 nets
     best_model = average_weights([model.encoder1.state_dict(), model.encoder2.state_dict()])
     for epoch in pbar:
-        train_loss, train_acc = trainer.train(BackgroundGenerator(train_loader, device, 4), model, optimizer)
+        train_loss, train_acc = trainer.train(train_loader, model, optimizer)
 
         if scheduler is not None:
             scheduler.step(train_loss)
