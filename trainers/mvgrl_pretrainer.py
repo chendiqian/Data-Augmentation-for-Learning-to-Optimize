@@ -40,25 +40,3 @@ class MVGRLPretrainer:
             corrects += compute_acc(g1, g2)
 
         return train_losses.item() / num_graphs, corrects.item() / num_graphs
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        corrects = 0
-        for i, (anchor, aug) in enumerate(dataloader):
-            n1, n2, g1, g2 = model(anchor, aug)
-            vals_nnodes = (anchor['vals'].ptr[1:] - anchor['vals'].ptr[:-1]).to(device)
-            cons_nnodes = (anchor['cons'].ptr[1:] - anchor['cons'].ptr[:-1]).to(device)
-            batch = torch.cat([torch.arange(anchor.num_graphs, device=device).repeat_interleave(vals_nnodes),
-                               torch.arange(anchor.num_graphs, device=device).repeat_interleave(cons_nnodes)], dim=0)
-            loss = self.loss_func(n1, n2, g1, g2, batch)
-
-            val_losses += loss.detach() * anchor.num_graphs
-            num_graphs += anchor.num_graphs
-
-            corrects += compute_acc(g1, g2)
-
-        return val_losses.item() / num_graphs, corrects.item() / num_graphs

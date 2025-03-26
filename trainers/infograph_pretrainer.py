@@ -34,23 +34,3 @@ class InfoGraphPretrainer:
             optimizer.step()
 
         return train_losses.item() / num_graphs, 0.
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        for i, data in enumerate(dataloader):
-            data = data.to(device)
-
-            global_pred, node_pred = model(data)
-            # homogeneous number of nodes
-            vals_nnodes = (data['vals'].ptr[1:] - data['vals'].ptr[:-1]).to(device)
-            cons_nnodes = (data['cons'].ptr[1:] - data['cons'].ptr[:-1]).to(device)
-            loss = local_global_loss(node_pred, global_pred, vals_nnodes, cons_nnodes)
-
-            val_losses += loss.detach() * data.num_graphs
-            num_graphs += data.num_graphs
-
-        return val_losses.item() / num_graphs, 0.

@@ -47,31 +47,3 @@ class NTXentPretrainer:
             corrects += compute_acc(pred1, pred2)
 
         return train_losses.item() / num_graphs, corrects.item() / num_graphs
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        corrects = 0
-        for i, (data1, data2) in enumerate(dataloader):
-            data1 = data1.to(device)
-            data2 = data2.to(device)
-
-            pred1, _ = model(data1)
-            pred2, _ = model(data2)
-
-            pred = torch.cat([pred1, pred2], dim=0)
-            label = torch.arange(pred1.shape[0], device=device).repeat(2)
-
-            # Basically you need to create labels such that positive pairs share the same label.
-            # https://github.com/KevinMusgrave/pytorch-metric-learning/issues/179
-            loss = self.loss_func(pred, label)
-
-            val_losses += loss.detach() * data1.num_graphs
-            num_graphs += data1.num_graphs
-
-            corrects += compute_acc(pred1, pred2)
-
-        return val_losses.item() / num_graphs, corrects.item() / num_graphs

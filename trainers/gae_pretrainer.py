@@ -34,24 +34,3 @@ class GAEPretrainer:
             optimizer.step()
 
         return train_losses.item() / num_graphs, 0.
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        for i, data in enumerate(dataloader):
-            data = data.to(device)
-
-            vals, cons = model(data)
-            loss = gae_regression_loss(vals, cons,
-                                       data[('cons', 'to', 'vals')].edge_index,
-                                       data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
-                                       data._slice_dict[('cons', 'to', 'vals')]['edge_index'].to(device),
-                                       data.num_graphs)
-
-            val_losses += loss.detach() * data.num_graphs
-            num_graphs += data.num_graphs
-
-        return val_losses.item() / num_graphs, 0.

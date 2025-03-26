@@ -35,22 +35,3 @@ class DGIPretrainer:
             optimizer.step()
 
         return train_losses.item() / num_graphs, 0.
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        for i, data in enumerate(dataloader):
-            obj_embedding, node_embedding = model(data)
-            vals_nnodes = (data['vals'].ptr[1:] - data['vals'].ptr[:-1]).to(device)
-            cons_nnodes = (data['cons'].ptr[1:] - data['cons'].ptr[:-1]).to(device)
-            batch = torch.cat([torch.arange(data.num_graphs, device=device).repeat_interleave(vals_nnodes),
-                               torch.arange(data.num_graphs, device=device).repeat_interleave(cons_nnodes)], dim=0)
-            loss = self.loss_func(node_embedding, obj_embedding, batch)
-
-            val_losses += loss.detach() * data.num_graphs
-            num_graphs += data.num_graphs
-
-        return val_losses.item() / num_graphs, 0.

@@ -38,27 +38,3 @@ class IGSDPretrainer:
             corrects += (preds == labels).sum()
 
         return train_losses.item() / num_graphs, corrects.item() / num_graphs
-
-    @torch.no_grad()
-    def eval(self, dataloader, model):
-        model.eval()
-
-        val_losses = 0.
-        num_graphs = 0
-        corrects = 0
-        for i, (data1, data2) in enumerate(dataloader):
-            data1 = data1.to(device)
-            data2 = data2.to(device)
-
-            consistence_mat = model(data1, data2)
-            labels = torch.arange(consistence_mat.shape[0], device=device)
-            # it is the L2 norm of distance, so the distance should be the lower the better
-            loss = self.loss_func(-consistence_mat / self.temperature, labels)
-
-            val_losses += loss.detach() * data1.num_graphs
-            num_graphs += data1.num_graphs
-
-            preds = consistence_mat.argmin(1)
-            corrects += (preds == labels).sum()
-
-        return val_losses.item() / num_graphs, corrects.item() / num_graphs
