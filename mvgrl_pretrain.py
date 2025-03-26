@@ -33,7 +33,11 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     train_loader = DataLoader(train_set,
                               batch_size=args.pretrain.batchsize,
                               shuffle=True,
-                              collate_fn=collate_fn)
+                              collate_fn=collate_fn,
+                              num_workers=1,
+                              pin_memory=True,
+                              persistent_workers=True,
+                              prefetch_factor=4)
 
     model = MVGRLPretrainGNN(
         conv=args.backbone.conv,

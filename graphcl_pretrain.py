@@ -5,7 +5,6 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
 
-import transforms
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
@@ -13,13 +12,15 @@ from models.infonce_pretrain_gnn import PretrainGNN
 from trainers.ntxent_pretrainer import NTXentPretrainer
 from trainers.training_loops import pretraining_loops
 from transforms.gcn_norm import GCNNormDumb
-from transforms.wrapper import ComboAugmentWrapper
+from transforms.graph_cl import ComboGraphCL
+
+# Todo: fix this for GraphCL
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
-    aug_list = [getattr(transforms, aug_class)(**kwargs)
-                for aug_class, kwargs in args.pretrain.method.items() if kwargs.strength > 0.]
-    transform = [ComboAugmentWrapper(aug_list)]
+    aug_dict = {aug_class: kwargs.strength for aug_class, kwargs in args.pretrain.method.items() if kwargs.strength > 0.}
+    transform = [ComboGraphCL(aug_dict)]
 
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
@@ -34,7 +35,11 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     train_loader = DataLoader(train_set,
                               batch_size=args.pretrain.batchsize,
                               shuffle=True,
-                              collate_fn=collate_fn)
+                              collate_fn=collate_fn,
+                              num_workers=4,
+                              pin_memory=True,
+                              persistent_workers=True,
+                              prefetch_factor=4)
 
     model = PretrainGNN(
         conv=args.backbone.conv,

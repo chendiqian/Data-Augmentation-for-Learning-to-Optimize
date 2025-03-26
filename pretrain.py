@@ -43,7 +43,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                               num_workers=4,
                               pin_memory=True,
                               persistent_workers=True,
-                              prefetch_factor=2)
+                              prefetch_factor=4)
 
     model = PretrainGNN(
         conv=args.backbone.conv,
