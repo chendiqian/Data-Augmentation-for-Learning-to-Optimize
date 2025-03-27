@@ -21,32 +21,42 @@ class PageRankAugment:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         ne = data['cons', 'to', 'vals'].edge_index.shape[1]
 
-        homo_edge_index = data['cons', 'to', 'vals'].edge_index.clone()  # CANNOT IN-SPACE!!!!
-        homo_edge_index[1] += m
-        homo_edge_index = to_undirected(homo_edge_index, num_nodes=m + n)
-        A = to_dense_adj(edge_index=homo_edge_index).squeeze().numpy()
-        deg = np.sum(A, 1)
-        d_inv = deg ** -0.5
-        d_inv[np.isinf(d_inv)] = 1.
-        d_inv[np.isnan(d_inv)] = 1.
-        A = A * d_inv[None] * d_inv[:, None]
+        if hasattr(data, 'ppr_scores') and hasattr(data, 'ppr_idx'):
+            diffusion = data.ppr_scores
+            sort_idx = data.ppr_idx
+        else:
+            homo_edge_index = data['cons', 'to', 'vals'].edge_index.clone()  # CANNOT IN-SPACE!!!!
+            homo_edge_index[1] += m
+            homo_edge_index = to_undirected(homo_edge_index, num_nodes=m + n)
+            A = to_dense_adj(edge_index=homo_edge_index).squeeze().numpy()
+            deg = np.sum(A, 1)
+            d_inv = deg ** -0.5
+            d_inv[np.isinf(d_inv)] = 1.
+            d_inv[np.isnan(d_inv)] = 1.
+            A = A * d_inv[None] * d_inv[:, None]
 
-        diffusion = self.alpha * inv((np.eye(A.shape[0]) - (1 - self.alpha) * A))
-        row, col = homo_edge_index.numpy()
-        # we don't want to select existing edges
-        diffusion[row, col] = -1.e10
-        # we take the original bipartite part
-        # does not make sense to add intra partition edges
-        diffusion = diffusion[:m, m:].reshape(-1)
+            diffusion = self.alpha * inv((np.eye(A.shape[0]) - (1 - self.alpha) * A))
+            row, col = homo_edge_index.numpy()
+            # we don't want to select existing edges
+            diffusion[row, col] = -1.e10
+            # we take the original bipartite part
+            # does not make sense to add intra partition edges
+            diffusion = diffusion[:m, m:].reshape(-1)
+            sort_idx = np.argsort(diffusion, axis=None)
+            diffusion = diffusion[sort_idx]
+            inf_mask = diffusion == -1.e10
+            sort_idx = sort_idx[~inf_mask]
+            diffusion = diffusion[~inf_mask]
+            sort_idx = torch.from_numpy(sort_idx).long()
+            diffusion = torch.from_numpy(diffusion).float()
+
         num_new_edges = int(self.strength * ne)
-        idx = np.argsort(diffusion, axis=None)[-num_new_edges:]
-        # unselect the original edges in case we select too many edges to add
-        idx = idx[diffusion[idx] > -1.e10]
+        idx = sort_idx[-num_new_edges:]
 
         new_row, new_col = idx // n, idx % n
-        extra_edge_index = torch.from_numpy(np.vstack([new_row, new_col])).long()
+        extra_edge_index = torch.vstack([new_row, new_col]).long()
         # todo: no better ideas how to generate edge attr for the edges
-        extra_edge_attr = torch.from_numpy(diffusion[idx]).float()[:, None]
+        extra_edge_attr = diffusion[-num_new_edges:].float()[:, None]
 
         new_data = data.__class__(
             cons={
