@@ -3,6 +3,6 @@ pretrain:
   weight_decay: 0.
   epoch: 500
   patience: 50
-  batchsize: 256
+  batchsize: 128
   temperature: 0.1
   num_pred_layers: 0  # no projector
