@@ -1,5 +1,5 @@
 import math
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 import torch
@@ -530,3 +530,52 @@ class CombinedDualViewAugmentations:
 
     def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
         return self.forward(data), self.forward(data)
+
+
+class ComboPreservedTransforms:
+    def __init__(self, tf_dict: Dict):
+        strengths = tf_dict.values()
+        assert max(strengths) > 0, "At least 1 transformation!"
+
+        assert not ('OracleDropInactiveConstraint' in tf_dict and
+                    'DropInactiveConstraint' in tf_dict and
+                    tf_dict['OracleDropInactiveConstraint'] * tf_dict['DropInactiveConstraint'] > 0), "Cannot both"
+
+        if 'OracleDropInactiveConstraint' in tf_dict and tf_dict['OracleDropInactiveConstraint'] > 0:
+            self.oracle_drop_c = OracleDropInactiveConstraint(tf_dict['OracleDropInactiveConstraint'])
+        else:
+            self.oracle_drop_c = lambda x: x
+
+        if 'DropInactiveConstraint' in tf_dict and tf_dict['DropInactiveConstraint'] > 0:
+            self.drop_c = DropInactiveConstraint(tf_dict['DropInactiveConstraint'])
+        else:
+            self.drop_c = lambda x: x
+
+        if 'AddRedundantConstraint' in tf_dict and tf_dict['AddRedundantConstraint'] > 0:
+            self.add_c = AddRedundantConstraint(tf_dict['AddRedundantConstraint'])
+        else:
+            self.add_c = lambda x: x
+
+        if 'ScaleConstraint' in tf_dict and tf_dict['ScaleConstraint'] > 0:
+            self.scale_c = ScaleConstraint(tf_dict['ScaleConstraint'])
+        else:
+            self.scale_c = lambda x: x
+
+        if 'ScaleCoordinate' in tf_dict and tf_dict['ScaleCoordinate'] > 0:
+            self.scale_v = ScaleCoordinate(tf_dict['ScaleCoordinate'])
+        else:
+            self.scale_v = lambda x: x
+
+        if 'AddDumbVariables' in tf_dict and tf_dict['AddDumbVariables'] > 0:
+            self.add_v = AddDumbVariables(tf_dict['AddDumbVariables'])
+        else:
+            self.add_v = lambda x: x
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        data = self.oracle_drop_c(data)
+        data = self.drop_c(data)
+        data = self.add_c(data)
+        data = self.scale_c(data)
+        data = self.scale_v(data)
+        data = self.add_v(data)
+        return data
