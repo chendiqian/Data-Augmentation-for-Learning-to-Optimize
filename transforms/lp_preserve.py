@@ -127,27 +127,25 @@ class AddRedundantConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         num_new_cons = int(m * self.p)
-        eye_mat = sp.eye_array(m, format='csr')
-        # rand_mat = sp.random_array((num_new_cons, m), density=self.affinity / m, format='csr')
 
-        rows = np.arange(num_new_cons).repeat(self.affinity)
-        cols = np.random.randint(low=0, high=m, size=self.affinity * num_new_cons)
-        values = np.random.rand(self.affinity * num_new_cons)
-        rand_mat = sp.csr_array((values, (rows, cols)), shape=(num_new_cons, m))
-
-        mat = sp.vstack([eye_mat, rand_mat])
+        idx = np.random.choice(m, (num_new_cons, self.affinity), replace=True)
+        weights = np.random.rand(*idx.shape)
 
         edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
-        A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
-                          (edge_index[0], edge_index[1])), shape=(m, n))
-        A_new = (mat @ A).tocoo()
-        edge_index = torch.from_numpy(np.vstack([A_new.row, A_new.col])).long()
-        edge_attr = torch.from_numpy(A_new.data)[:, None].float()
+        edge_attr = data[('cons', 'to', 'vals')].edge_attr.squeeze(1).numpy()
 
-        new_b = mat @ data.b.numpy()
+        A = np.zeros((m, n), dtype=np.float32)
+        A[edge_index[0], edge_index[1]] = edge_attr
+
+        extra_A = np.einsum('nk,nkf->nf', weights, A[idx])
+        where = np.where(extra_A)
+        extra_edge_index = torch.from_numpy(np.vstack(where)).long()
+        extra_edge_index[0] += m
+        extra_edge_attr = torch.from_numpy(extra_A[where[0], where[1]])[:, None].float()
+
+        new_b = (weights * data.b.numpy()[idx]).sum(1)
         bias = np.random.randn(new_b.shape[0])
         bias[bias < 0] = 0.
-        bias[:m] = 0
         new_b += bias
         new_b = torch.from_numpy(new_b).float()
 
@@ -160,10 +158,10 @@ class AddRedundantConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            cons__to__vals={'edge_index': edge_index,
-                            'edge_attr': edge_attr},
+            cons__to__vals={'edge_index': torch.hstack([data[('cons', 'to', 'vals')].edge_index, extra_edge_index]),
+                            'edge_attr': torch.vstack([data[('cons', 'to', 'vals')].edge_attr, extra_edge_attr])},
             q=data.q,
-            b=new_b,
+            b=torch.hstack([data.b, new_b]),
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
             inactive_idx=data.inactive_idx,
