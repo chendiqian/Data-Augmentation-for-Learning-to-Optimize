@@ -5,8 +5,43 @@ import numpy as np
 import torch
 from scipy import sparse as sp
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import bipartite_subgraph
 from torch_scatter import scatter_sum
+
+
+def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> HeteroData:
+    m, n = data['cons'].num_nodes, data['vals'].num_nodes
+
+    edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+
+    remain_cons = ~np.isin(np.arange(m), drop_idx)
+    keep_edge_mask = ~np.isin(edge_index[0], drop_idx)
+
+    edge_index = edge_index[:, keep_edge_mask]
+    _, remapped_a = np.unique(edge_index[0], return_inverse=True)
+    edge_index[0] = remapped_a
+
+    new_edge_index = torch.from_numpy(edge_index).long()
+    new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
+
+    new_data = data.__class__(
+        cons={
+            'num_nodes': remain_cons.sum().item(),
+            'x': data['cons'].x[remain_cons],
+        },
+        vals={
+            'num_nodes': n,
+            'x': data['vals'].x,
+        },
+        cons__to__vals={'edge_index': new_edge_index,
+                        'edge_attr': new_edge_attr},
+        q=data.q,
+        b=data.b[remain_cons],
+        obj_solution=data.obj_solution,
+        x_solution=data.x_solution,
+        inactive_idx=data.inactive_idx,
+        heur_idx=data.heur_idx,
+    )
+    return new_data
 
 
 class OracleDropInactiveConstraint:
@@ -21,42 +56,10 @@ class OracleDropInactiveConstraint:
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-
         assert hasattr(data, 'inactive_idx')
         inactive_idx = data.inactive_idx.numpy()
-
-        dropped_cons = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
-        remain_cons = ~np.isin(np.arange(m), dropped_cons)
-        remain_cons = torch.from_numpy(remain_cons)
-
-        # modify cons 2 vals edge_index
-        c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
-            subset=(remain_cons, torch.ones(n, dtype=torch.bool)),
-            edge_index=data[('cons', 'to', 'vals')].edge_index,
-            edge_attr=data[('cons', 'to', 'vals')].edge_attr,
-            relabel_nodes=True,
-            size=(m, n),
-            return_edge_mask=False)
-
-        new_data = data.__class__(
-            cons={
-                'num_nodes': remain_cons.sum().item(),
-                'x': data['cons'].x[remain_cons],
-            },
-            vals={
-                'num_nodes': n,
-                'x': data['vals'].x,
-            },
-            cons__to__vals={'edge_index': c2v_edge_index,
-                            'edge_attr': c2v_edge_attr},
-            q=data.q,
-            b=data.b[remain_cons],
-            obj_solution=data.obj_solution,
-            x_solution=data.x_solution,
-            inactive_idx=data.inactive_idx,
-            heur_idx=data.heur_idx,
-        )
-        return new_data
+        drop_idx = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
+        return drop_cons(data, drop_idx)
 
     def __repr__(self):
         return 'OracleDropInactiveConstraint'
@@ -73,42 +76,10 @@ class DropInactiveConstraint:
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-
         assert hasattr(data, 'heur_idx')
         heur_idx = data.heur_idx.numpy()
-
-        dropped_cons = np.random.choice(heur_idx, size=min(int(m * self.p), len(heur_idx)), replace=False)
-        remain_cons = ~np.isin(np.arange(m), dropped_cons)
-        remain_cons = torch.from_numpy(remain_cons)
-
-        # modify cons 2 vals edge_index
-        c2v_edge_index, c2v_edge_attr = bipartite_subgraph(
-            subset=(remain_cons, torch.ones(n, dtype=torch.bool)),
-            edge_index=data[('cons', 'to', 'vals')].edge_index,
-            edge_attr=data[('cons', 'to', 'vals')].edge_attr,
-            relabel_nodes=True,
-            size=(m, n),
-            return_edge_mask=False)
-
-        new_data = data.__class__(
-            cons={
-                'num_nodes': remain_cons.sum().item(),
-                'x': data['cons'].x[remain_cons],
-            },
-            vals={
-                'num_nodes': n,
-                'x': data['vals'].x,
-            },
-            cons__to__vals={'edge_index': c2v_edge_index,
-                            'edge_attr': c2v_edge_attr},
-            q=data.q,
-            b=data.b[remain_cons],
-            obj_solution=data.obj_solution,
-            x_solution=data.x_solution,
-            inactive_idx=data.inactive_idx,
-            heur_idx=data.heur_idx,
-        )
-        return new_data
+        drop_idx = np.random.choice(heur_idx, size=min(int(m * self.p), len(heur_idx)), replace=False)
+        return drop_cons(data, drop_idx)
 
     def __repr__(self):
         return 'DropInactiveConstraint'
