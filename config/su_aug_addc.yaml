@@ -1,0 +1,11 @@
+data_aug:
+  method:
+    AddRedundantConstraint:
+      strength: 0.5
+      affinity: 3
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - _self_
