@@ -74,6 +74,14 @@ class ComboAugmentWrapper:
         return d1, d2
 
 
+class DuoAugmentWrapper:
+    def __init__(self, transform):
+        self.transform = transform
+
+    def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
+        return self.transform(data), self.transform(data)
+
+
 class AnchorAugmentWrapper:
     """
     For now it is only for single PPR transform

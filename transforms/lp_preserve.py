@@ -410,108 +410,6 @@ class AddDumbVariables:
         return 'AddDumbVariables'
 
 
-class CombinedDualViewAugmentations:
-    def __init__(self,
-                 dropinactiveconstraint: float = 0.,
-                 addredundantconstraint: float = 0.4,
-                 scaleconstraint: float = 1.,
-                 scalecoordinate: float = 1.,
-                 adddumbvariables: float = 0.4, **kwargs):
-        self.aug_list = {'dropinactiveconstraint': dropinactiveconstraint,
-                         'addredundantconstraint': addredundantconstraint,
-                         'scaleconstraint': scaleconstraint,
-                         'scalecoordinate': scalecoordinate,
-                         'adddumbvariables': adddumbvariables}
-
-    def forward(self, data: HeteroData) -> HeteroData:
-        m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
-
-        A = sp.csr_array((data[('cons', 'to', 'vals')].edge_attr.numpy().squeeze(1),
-                          (edge_index[0], edge_index[1])), shape=(m, n))
-        b = data.b.numpy()
-        c = data.q.numpy()
-
-        # drop inactive constraints
-        if self.aug_list['dropinactiveconstraint'] > 0:
-            p = self.aug_list['dropinactiveconstraint']
-            heur_idx = data.heur_idx.numpy()
-            dropped_cons = np.random.choice(heur_idx, size=min(int(m * p), len(heur_idx)), replace=False)
-            remain_cons = ~np.isin(np.arange(m), dropped_cons)
-            A = A[remain_cons, :]
-            b = b[remain_cons]
-
-            m = remain_cons.sum()
-
-        # AddRedundantConstraint
-        affinity = 3
-        num_new_cons = int(m * self.aug_list['addredundantconstraint'])
-        rows = np.hstack([np.arange(m), np.arange(num_new_cons).repeat(affinity) + m])
-        cols = np.hstack([np.arange(m), np.random.randint(low=0, high=m, size=affinity * num_new_cons)])
-        values = np.hstack([np.ones(m) * 1., np.random.rand(affinity * num_new_cons)])
-        rand_mat = sp.csr_array((values, (rows, cols)), shape=(num_new_cons + m, m))
-
-        b_bias = np.random.randn(m + num_new_cons)
-        b_bias[b_bias < 0] = 0.
-        b_bias[:m] = 0
-        m = num_new_cons + m
-
-        # scale constraints
-        noise_scale = math.exp(self.aug_list['scaleconstraint']) - 1.
-        noise = np.random.randn(m) * noise_scale
-        scales = np.abs(noise + np.ones_like(noise))
-        rand_mat = rand_mat * scales[:, None]
-
-        b = rand_mat @ b + b_bias
-        A = rand_mat @ A
-
-        # scale coordinates
-        noise_scale = math.exp(self.aug_list['scalecoordinate']) - 1.
-
-        noise = np.random.randn(n) * noise_scale
-        scales = np.abs(noise + np.ones_like(noise))
-        A = A * scales[None]
-        c = c * scales
-
-        # AddSubOrthogonalConstraint
-        A = A.tocoo()
-
-        num_new_vars = int(n * self.aug_list['adddumbvariables'])
-        density = A.nnz / np.prod(A.shape)
-
-        selected_idx = np.sort(np.random.choice(num_new_vars * m, int(num_new_vars * m * density), replace=False))
-        new_row = selected_idx // num_new_vars
-        new_col = selected_idx % num_new_vars + n
-
-        edge_index = np.vstack([A.row, A.col])
-        extra_edge_index = np.vstack([new_row, new_col])
-        edge_index = np.hstack([edge_index, extra_edge_index])
-        edge_attr = np.hstack([A.data, np.random.rand(extra_edge_index.shape[1])])
-        c = np.hstack([c, np.random.rand(num_new_vars)])
-
-        n = n + num_new_vars
-
-        new_data = data.__class__(
-            cons={
-                'num_nodes': m,
-                'x': torch.empty(m),
-            },
-            vals={
-                'num_nodes': n,
-                'x': torch.empty(n),
-            },
-            cons__to__vals={'edge_index': torch.from_numpy(edge_index).long(),
-                            'edge_attr': torch.from_numpy(edge_attr).float()[:, None]},
-            # added c must be non-negative, otherwise might change the solution
-            q=torch.from_numpy(c).float(),
-            b=torch.from_numpy(b).float(),
-        )
-        return new_data
-
-    def __call__(self, data: HeteroData) -> Tuple[HeteroData, HeteroData]:
-        return self.forward(data), self.forward(data)
-
-
 class ComboPreservedTransforms:
     def __init__(self, tf_dict: Dict):
         strengths = tf_dict.values()
@@ -524,38 +422,35 @@ class ComboPreservedTransforms:
         if 'OracleDropInactiveConstraint' in tf_dict and tf_dict['OracleDropInactiveConstraint'] > 0:
             self.oracle_drop_c = OracleDropInactiveConstraint(tf_dict['OracleDropInactiveConstraint'])
         else:
-            self.oracle_drop_c = lambda x: x
+            self.oracle_drop_c = None
 
         if 'DropInactiveConstraint' in tf_dict and tf_dict['DropInactiveConstraint'] > 0:
             self.drop_c = DropInactiveConstraint(tf_dict['DropInactiveConstraint'])
         else:
-            self.drop_c = lambda x: x
+            self.drop_c = None
 
         if 'AddRedundantConstraint' in tf_dict and tf_dict['AddRedundantConstraint'] > 0:
             self.add_c = AddRedundantConstraint(tf_dict['AddRedundantConstraint'])
         else:
-            self.add_c = lambda x: x
+            self.add_c = None
 
         if 'ScaleConstraint' in tf_dict and tf_dict['ScaleConstraint'] > 0:
             self.scale_c = ScaleConstraint(tf_dict['ScaleConstraint'])
         else:
-            self.scale_c = lambda x: x
+            self.scale_c = None
 
         if 'ScaleCoordinate' in tf_dict and tf_dict['ScaleCoordinate'] > 0:
             self.scale_v = ScaleCoordinate(tf_dict['ScaleCoordinate'])
         else:
-            self.scale_v = lambda x: x
+            self.scale_v = None
 
         if 'AddDumbVariables' in tf_dict and tf_dict['AddDumbVariables'] > 0:
             self.add_v = AddDumbVariables(tf_dict['AddDumbVariables'])
         else:
-            self.add_v = lambda x: x
+            self.add_v = None
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        data = self.oracle_drop_c(data)
-        data = self.drop_c(data)
-        data = self.add_c(data)
-        data = self.scale_c(data)
-        data = self.scale_v(data)
-        data = self.add_v(data)
+        for fs in [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]:
+            if fs is not None:
+                data = fs(data)
         return data
