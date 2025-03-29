@@ -10,6 +10,10 @@ from torch_scatter import scatter_sum
 from utils.models import drop_cons
 
 
+def is_qp(data: HeteroData):
+    return ('vals', 'to', 'vals') in data.edge_index_dict
+
+
 class OracleDropInactiveConstraint:
     """
     Drop definitely inactive constraints
@@ -25,7 +29,7 @@ class OracleDropInactiveConstraint:
         assert hasattr(data, 'inactive_idx')
         inactive_idx = data.inactive_idx.numpy()
         drop_idx = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
-        new_edge_index, new_edge_attr = drop_cons(data, drop_idx)
+        c2v_edge_index, c2v_edge_attr = drop_cons(data, drop_idx)
         remain_cons = ~np.isin(np.arange(m), drop_idx)
 
         new_data = data.__class__(
@@ -37,8 +41,8 @@ class OracleDropInactiveConstraint:
                 'num_nodes': n,
                 'x': data['vals'].x,
             },
-            cons__to__vals={'edge_index': new_edge_index,
-                            'edge_attr': new_edge_attr},
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
             q=data.q,
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
@@ -46,6 +50,10 @@ class OracleDropInactiveConstraint:
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = data[('vals', 'to', 'vals')].edge_attr
         return new_data
 
     def __repr__(self):
@@ -62,6 +70,9 @@ class DropInactiveConstraint:
         self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
+        if is_qp(data):
+            raise NotImplementedError
+
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         assert hasattr(data, 'heur_idx')
         heur_idx = data.heur_idx.numpy()
@@ -146,53 +157,14 @@ class AddRedundantConstraint:
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = data[('vals', 'to', 'vals')].edge_attr
         return new_data
 
     def __repr__(self):
         return 'AddRedundantConstraint'
-
-
-class ScaleObj:
-    """
-    c <- a * c
-    but it's not really obj value preserving, it is solution preserving
-    """
-
-    def __init__(self, strength=1.):
-        assert strength > 0.
-        self.p = strength
-
-    def __call__(self, data: HeteroData) -> HeteroData:
-        # scales = abs(1 + N(0, 1) * exp(p - 1))
-
-        noise_scale = math.exp(self.p) - 1.
-        # 0. -> 0., 1. -> 1.73
-
-        noise = torch.randn(1) * noise_scale
-        scale = (noise + 1.).abs()
-
-        new_data = data.__class__(
-            cons={
-                'num_nodes': data['cons'].num_nodes,
-                'x': data['cons'].x,
-            },
-            vals={
-                'num_nodes': data['vals'].num_nodes,
-                'x': data['vals'].x,
-            },
-            cons__to__vals={'edge_index': data[('cons', 'to', 'vals')].edge_index,
-                            'edge_attr': data[('cons', 'to', 'vals')].edge_attr},
-            q=data.q * scale,
-            b=data.b,
-            obj_solution=data.obj_solution * scale,
-            x_solution=data.x_solution,
-            inactive_idx=data.inactive_idx,
-            heur_idx=data.heur_idx,
-        )
-        return new_data
-
-    def __repr__(self):
-        return 'ScaleObj'
 
 
 class ScaleConstraint:
@@ -237,6 +209,10 @@ class ScaleConstraint:
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = data[('vals', 'to', 'vals')].edge_attr
         return new_data
 
     def __repr__(self):
@@ -280,10 +256,16 @@ class ScaleCoordinate:
             q=data.q * scales,
             b=data.b,
             obj_solution=data.obj_solution,
-            x_solution=data.x_solution,
+            x_solution=data.x_solution / scales,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            Qrows, Qcols = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = (data[('vals', 'to', 'vals')].edge_attr *
+                                                          scales[Qcols, None] * scales[Qrows, None])
         return new_data
 
     def __repr__(self):
@@ -301,6 +283,9 @@ class AddSubOrthogonalConstraint:
         self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
+        if is_qp(data):
+            raise NotImplementedError
+
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
 
         def batch_sparse_orthogonal(c, num_new, density=0.1):
@@ -403,6 +388,22 @@ class AddDumbVariables:
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            row = torch.arange(n)
+            col = torch.full((n,), n, dtype=torch.long)
+            extra_v2v_edge_index = torch.hstack([torch.vstack([row, col]),
+                                                 torch.vstack([col, row]),
+                                                 torch.tensor([[n], [n]], dtype=torch.long)])
+            extra_v2v_edge_attr = torch.rand(n)
+            Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n * n)
+            extra_v2v_edge_attr[np.random.rand(n) > Q_dens] = 0.
+            extra_v2v_edge_attr = torch.hstack([extra_v2v_edge_attr, extra_v2v_edge_attr, torch.rand(1)])
+
+            new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([data[('vals', 'to', 'vals')].edge_index,
+                                                                        extra_v2v_edge_index])
+            new_data[('vals', 'to', 'vals')].edge_attr = torch.vstack([data[('vals', 'to', 'vals')].edge_attr,
+                                                                       extra_v2v_edge_attr[:, None]])
         return new_data
 
     def __repr__(self):
