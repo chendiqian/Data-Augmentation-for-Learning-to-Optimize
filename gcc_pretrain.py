@@ -13,13 +13,12 @@ from trainers.ntxent_pretrainer import NTXentPretrainer
 from trainers.training_loops import pretraining_loops
 from transforms.gcn_norm import GCNNormDumb
 from transforms.rw_subgraph import RWSubgraph
-from transforms.wrapper import ComboAugmentWrapper
+from transforms.wrapper import DuoAugmentWrapper
 
 
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     # the only augmentation
-    aug_list = [RWSubgraph(args.pretrain.method.RWSubgraph.walk_length)]
-    transform = [ComboAugmentWrapper(aug_list)]
+    transform = [DuoAugmentWrapper(RWSubgraph(args.pretrain.method.RWSubgraph.walk_length))]
 
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
