@@ -14,7 +14,7 @@ from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
 from trainers.training_loops import supervised_train_eval_loops
 from transforms.gcn_norm import GCNNorm
-from transforms.wrapper import SingleAugmentWrapper
+from transforms.lp_preserve import ComboPreservedTransforms
 from utils.experiment import save_run_config, setup_wandb
 
 
@@ -23,9 +23,13 @@ def main(args: DictConfig):
     log_folder_name = save_run_config(args)
     setup_wandb(args)
 
-    aug_list = [getattr(transforms, aug_class)(**kwargs)
-                for aug_class, kwargs in args.data_aug.method.items() if kwargs.strength > 0.]
-    transform = [SingleAugmentWrapper(aug_list)]
+    aug_dict = {aug_class: kwargs.strength for aug_class, kwargs in args.data_aug.method.items() if
+                kwargs.strength > 0.}
+    if len(aug_dict) == 1:
+        key = list(aug_dict.keys())[0]
+        transform = [getattr(transforms, key)(aug_dict[key])]
+    else:
+        transform = [ComboPreservedTransforms(aug_dict)]
 
     if 'gcn' in args.backbone.conv:
         extra_transform = GCNNorm()

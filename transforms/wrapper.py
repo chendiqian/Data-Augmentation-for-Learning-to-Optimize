@@ -4,7 +4,7 @@ from typing import List, Tuple
 import numpy as np
 from torch_geometric.data import HeteroData
 
-from . import TRANSFORM_CODEBOOK
+# from . import TRANSFORM_CODEBOOK
 
 
 # def sort_transforms_lists(transforms: List):
@@ -42,18 +42,18 @@ from . import TRANSFORM_CODEBOOK
 #     return sorted_tfs
 
 
-class SingleAugmentWrapper:
-    """
-    Return 1 views of the graph, perturbation rate can vary
-    """
+# class SingleAugmentWrapper:
+#     """
+#     Return 1 views of the graph, perturbation rate can vary
+#     """
 
     # def __init__(self, transforms: List):
     #     self.max_strength_dict = {tf: tf.p for tf in transforms}
     #     sorted_transforms_lists = sort_transforms(transforms)
     #     self.transforms = sorted_transforms_lists
 
-    def __call__(self, data: HeteroData) -> HeteroData:
-        raise NotImplementedError("deprecated!")
+    # def __call__(self, data: HeteroData) -> HeteroData:
+    #     raise NotImplementedError("deprecated!")
         # for tf_class in self.transforms:
         #     max_rate = self.max_strength_dict[tf_class]
         #     tf_class.p = random.random() * max_rate
