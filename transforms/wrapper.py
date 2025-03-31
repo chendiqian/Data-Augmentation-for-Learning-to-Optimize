@@ -42,23 +42,21 @@ from torch_geometric.data import HeteroData
 #     return sorted_tfs
 
 
-# class SingleAugmentWrapper:
-#     """
-#     Return 1 views of the graph, perturbation rate can vary
-#     """
+class SingleAugmentWrapper:
+    """
+    Return 1 views of the graph, perturbation rate can vary
+    """
 
-    # def __init__(self, transforms: List):
-    #     self.max_strength_dict = {tf: tf.p for tf in transforms}
-    #     sorted_transforms_lists = sort_transforms(transforms)
-    #     self.transforms = sorted_transforms_lists
+    def __init__(self, transform):
+        # self.max_strength_dict = {tf:  for tf in transforms}
+        self.max_p = transform.p
+        # sorted_transforms_lists = sort_transforms(transforms)
+        self.transform = transform
 
-    # def __call__(self, data: HeteroData) -> HeteroData:
-    #     raise NotImplementedError("deprecated!")
-        # for tf_class in self.transforms:
-        #     max_rate = self.max_strength_dict[tf_class]
-        #     tf_class.p = random.random() * max_rate
-        #     data = tf_class(data)
-        # return data
+    def __call__(self, data: HeteroData) -> HeteroData:
+        self.transform.p = random.random() * self.max_p
+        data = self.transform(data)
+        return data
 
 
 # class ComboAugmentWrapper:
