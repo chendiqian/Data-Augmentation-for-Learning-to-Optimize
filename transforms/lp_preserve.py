@@ -1,9 +1,9 @@
 import math
-from typing import Tuple, Dict
+from typing import Dict
+import random
 
 import numpy as np
 import torch
-from scipy import sparse as sp
 from torch_geometric.data import HeteroData
 from torch_scatter import scatter_sum
 
@@ -454,3 +454,26 @@ class ComboPreservedTransforms:
             if fs is not None:
                 data = fs(data)
         return data
+
+
+class ComboInterpolateTransforms(ComboPreservedTransforms):
+    def __init__(self, tf_dict: Dict):
+        super().__init__(tf_dict)
+        self.tf_dict = tf_dict
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        for fs in [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]:
+            if fs is not None:
+                max_p = self.tf_dict[str(fs)]
+                fs.p = random.random() * max_p
+                data = fs(data)
+        return data
+
+
+class ComboSampleTransforms(ComboPreservedTransforms):
+    def __init__(self, tf_dict: Dict):
+        super().__init__(tf_dict)
+        self.tf_dict = tf_dict
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        raise NotImplementedError
