@@ -30,7 +30,7 @@ def main(args: DictConfig):
         key = list(aug_dict.keys())[0]
         transform = [SingleAugmentWrapper(getattr(transforms, key)(aug_dict[key]))]
     else:
-        transform = [ComboInterpolateTransforms(aug_dict)]
+        transform = [ComboInterpolateTransforms(aug_dict, args.data_aug.num_samples)]
 
     if 'gcn' in args.backbone.conv:
         extra_transform = GCNNorm()

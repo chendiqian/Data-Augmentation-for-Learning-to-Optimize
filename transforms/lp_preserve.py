@@ -457,23 +457,21 @@ class ComboPreservedTransforms:
 
 
 class ComboInterpolateTransforms(ComboPreservedTransforms):
-    def __init__(self, tf_dict: Dict):
+    def __init__(self, tf_dict: Dict, num_samples: int):
         super().__init__(tf_dict)
         self.tf_dict = tf_dict
+        self.num_samples = num_samples
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        for fs in [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]:
-            if fs is not None:
+        tf_list = [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]
+        if self.num_samples == -1:
+            selected_idx = np.arange(len(tf_list))
+        else:
+            selected_idx = np.random.choice(len(tf_list), min(self.num_samples, len(tf_list)), replace=False)
+
+        for i, fs in enumerate(tf_list):
+            if fs is not None and i in selected_idx:
                 max_p = self.tf_dict[str(fs)]
                 fs.p = random.random() * max_p
                 data = fs(data)
         return data
-
-
-class ComboSampleTransforms(ComboPreservedTransforms):
-    def __init__(self, tf_dict: Dict):
-        super().__init__(tf_dict)
-        self.tf_dict = tf_dict
-
-    def __call__(self, data: HeteroData) -> HeteroData:
-        raise NotImplementedError
