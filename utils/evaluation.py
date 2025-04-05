@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import numpy as np
 import torch
 from scipy import sparse as sp
@@ -202,4 +203,8 @@ def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=
 
 
 def is_qp(data: HeteroData):
-    return ('vals', 'to', 'vals') in data.edge_index_dict
+    if isinstance(data, HeteroData):
+        d = data
+    elif isinstance(data, (List, Tuple)):
+        d = data[0]
+    return ('vals', 'to', 'vals') in d.edge_index_dict
