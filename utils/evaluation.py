@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from scipy import sparse as sp
 from torch.nn import functional as F
+from torch_geometric.data import HeteroData
 from torch_geometric.utils import scatter
 from torch_scatter import scatter_sum
 from torch_sparse import SparseTensor, spmm
@@ -198,3 +199,7 @@ def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=
     inactive_mask = ~active_mask
     inactive_idx = torch.where(inactive_mask)[0]
     return inactive_idx
+
+
+def is_qp(data: HeteroData):
+    return ('vals', 'to', 'vals') in data.edge_index_dict

@@ -17,6 +17,7 @@ from models.backbone import Backbone
 from trainers.supervised_trainer import PlainGNNTrainer, LinearTrainer
 from trainers.training_loops import supervised_train_eval_loops
 from utils.experiment import save_run_config, setup_wandb
+from utils.evaluation import is_qp
 
 
 def get_feat_label(model, loader, device):
@@ -50,8 +51,6 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         valid_set = valid_set[:20]
         test_set = test_set[:20]
 
-    is_qp = ('vals', 'to', 'vals') in train_set[0].edge_index_dict
-
     val_loader = DataLoader(valid_set,
                             batch_size=args.finetune.batchsize,
                             shuffle=False,
@@ -81,7 +80,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 
         if args.finetune.whole:
             # finetune the whole model
-            model = GNN(is_qp=is_qp,
+            model = GNN(is_qp=is_qp(train_set[0]),
                         conv=args.backbone.conv,
                         hid_dim=args.backbone.hidden,
                         num_encode_layers=args.backbone.num_encode_layers,
@@ -94,7 +93,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
             trainer = PlainGNNTrainer()
         else:
             model = Backbone(
-                is_qp=is_qp,
+                is_qp=is_qp(train_set[0]),
                 conv=args.backbone.conv,
                 hid_dim=args.backbone.hidden,
                 num_encode_layers=args.backbone.num_encode_layers,

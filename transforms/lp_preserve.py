@@ -7,11 +7,8 @@ import torch
 from torch_geometric.data import HeteroData
 from torch_scatter import scatter_sum
 
+from utils.evaluation import is_qp
 from utils.models import drop_cons
-
-
-def is_qp(data: HeteroData):
-    return ('vals', 'to', 'vals') in data.edge_index_dict
 
 
 class OracleDropInactiveConstraint:

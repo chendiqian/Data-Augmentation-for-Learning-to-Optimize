@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
+from utils.evaluation import is_qp
 from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
 from trainers.training_loops import supervised_train_eval_loops
@@ -30,8 +31,6 @@ def main(args: DictConfig):
     train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
     valid_set = LPDataset(args.exp.datapath, 'valid', transform=transform)
     test_set = LPDataset(args.exp.datapath, 'test', transform=transform)
-
-    is_qp = ('vals', 'to', 'vals') in train_set[0].edge_index_dict
 
     if args.exp.debug:
         valid_set = valid_set[:20]
@@ -68,7 +67,7 @@ def main(args: DictConfig):
                                       collate_fn=collate_fn_lp_base,
                                       pin_memory=True)
 
-            model = GNN(is_qp=is_qp,
+            model = GNN(is_qp=is_qp(train_set[0]),
                         conv=args.backbone.conv,
                         hid_dim=args.backbone.hidden,
                         num_encode_layers=args.backbone.num_encode_layers,

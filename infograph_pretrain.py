@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
+from utils.evaluation import is_qp
 from models.infograph_pretrain_gnn import InfoGraphPretrainGNN
 from trainers.infograph_pretrainer import InfoGraphPretrainer
 from trainers.training_loops import pretraining_loops
@@ -20,8 +21,6 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     if args.exp.debug:
         train_set = train_set[:20]
 
-    is_qp = ('vals', 'to', 'vals') in train_set[0].edge_index_dict
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     collate_fn = collate_fn_lp_base
     train_loader = DataLoader(train_set,
@@ -30,7 +29,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                               collate_fn=collate_fn)
 
     model = InfoGraphPretrainGNN(
-        is_qp=is_qp,
+        is_qp=is_qp(train_set[0]),
         conv=args.backbone.conv,
         hid_dim=args.backbone.hidden,
         num_encode_layers=args.backbone.num_encode_layers,
