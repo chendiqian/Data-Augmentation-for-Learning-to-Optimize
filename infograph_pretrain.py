@@ -20,6 +20,8 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     if args.exp.debug:
         train_set = train_set[:20]
 
+    is_qp = ('vals', 'to', 'vals') in train_set[0].edge_index_dict
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     collate_fn = collate_fn_lp_base
     train_loader = DataLoader(train_set,
@@ -28,6 +30,7 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
                               collate_fn=collate_fn)
 
     model = InfoGraphPretrainGNN(
+        is_qp=is_qp,
         conv=args.backbone.conv,
         hid_dim=args.backbone.hidden,
         num_encode_layers=args.backbone.num_encode_layers,

@@ -50,6 +50,8 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         valid_set = valid_set[:20]
         test_set = test_set[:20]
 
+    is_qp = ('vals', 'to', 'vals') in train_set[0].edge_index_dict
+
     val_loader = DataLoader(valid_set,
                             batch_size=args.finetune.batchsize,
                             shuffle=False,
@@ -79,7 +81,8 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
 
         if args.finetune.whole:
             # finetune the whole model
-            model = GNN(conv=args.backbone.conv,
+            model = GNN(is_qp=is_qp,
+                        conv=args.backbone.conv,
                         hid_dim=args.backbone.hidden,
                         num_encode_layers=args.backbone.num_encode_layers,
                         num_conv_layers=args.backbone.num_conv_layers,
@@ -91,6 +94,7 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
             trainer = PlainGNNTrainer()
         else:
             model = Backbone(
+                is_qp=is_qp,
                 conv=args.backbone.conv,
                 hid_dim=args.backbone.hidden,
                 num_encode_layers=args.backbone.num_encode_layers,

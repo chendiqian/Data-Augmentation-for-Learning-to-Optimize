@@ -4,7 +4,7 @@ import torch
 from torch_geometric.nn import MLP, global_mean_pool
 from torch_geometric.typing import EdgeType, NodeType
 
-from models.hetero_conv import HeteroConv
+from models.hetero_conv import LPHeteroConv, QPHeteroConv
 from models.convs.gcnconv import GCNConv
 from models.convs.ginconv import GINEConv
 from models.convs.sageconv import SAGEConv
@@ -30,6 +30,7 @@ def get_conv_layer(conv: str,
 
 class Backbone(torch.nn.Module):
     def __init__(self,
+                 is_qp,
                  conv,
                  hid_dim,
                  num_encode_layers,
@@ -46,10 +47,17 @@ class Backbone(torch.nn.Module):
 
         self.gcns = torch.nn.ModuleList()
         for layer in range(num_conv_layers):
-            self.gcns.append(HeteroConv(
-                v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
-                c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
-            ))
+            if is_qp:
+                self.gcns.append(QPHeteroConv(
+                    v2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                    v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                    c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
+                ))
+            else:
+                self.gcns.append(LPHeteroConv(
+                    v2c_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm),
+                    c2v_conv=get_conv_layer(conv, hid_dim, num_mlp_layers, norm)
+                ))
 
         if backbone_pred_layers == 0:
             self.fc_obj = torch.nn.Identity()

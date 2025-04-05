@@ -8,6 +8,7 @@ from models.backbone import Backbone
 
 class MVGRLPretrainGNN(torch.nn.Module):
     def __init__(self,
+                 is_qp,
                  conv,
                  hid_dim,
                  num_encode_layers,
@@ -19,6 +20,7 @@ class MVGRLPretrainGNN(torch.nn.Module):
         super().__init__()
 
         self.encoder1 = Backbone(
+            is_qp,
             conv,
             hid_dim,
             num_encode_layers,

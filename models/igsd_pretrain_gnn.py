@@ -10,6 +10,7 @@ from utils.models import EMA, update_moving_average
 
 class IGSDPretrainGNN(torch.nn.Module):
     def __init__(self,
+                 is_qp,
                  conv,
                  hid_dim,
                  num_encode_layers,
@@ -24,6 +25,7 @@ class IGSDPretrainGNN(torch.nn.Module):
         self.ema_updater = EMA(0.99)
 
         self.encoder1 = Backbone(
+            is_qp,
             conv,
             hid_dim,
             num_encode_layers,

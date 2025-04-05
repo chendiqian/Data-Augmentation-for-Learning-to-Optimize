@@ -7,26 +7,11 @@ from torch_geometric.nn.conv.hetero_conv import group
 
 
 class HeteroConv(torch.nn.Module):
-    def __init__(
-            self,
-            v2c_conv: torch.nn.Module,
-            c2v_conv: torch.nn.Module,
-            sync_conv: bool = False
-    ):
+    def __init__(self):
         super().__init__()
 
-        self.convs = torch.nn.ModuleDict(
-            {'vals_cons': v2c_conv,
-             'cons_vals': c2v_conv}
-        )
-        # we use c -> v -> o setting, so o is the final output
-        self.conv_sequence = [('vals_cons',),
-                              ('cons_vals',),]
-        self.sync_conv = sync_conv
-
     def reset_parameters(self):
-        self.convs['vals_cons'].reset_parameters()
-        self.convs['cons_vals'].reset_parameters()
+        raise NotImplementedError
 
     def forward(
             self,
@@ -58,3 +43,53 @@ class HeteroConv(torch.nn.Module):
                 x_dict[dst] = group(current_results, 'mean')
 
         return new_dict if self.sync_conv else x_dict
+
+
+class LPHeteroConv(HeteroConv):
+    def __init__(
+            self,
+            v2c_conv: torch.nn.Module,
+            c2v_conv: torch.nn.Module,
+            sync_conv: bool = False
+    ):
+        super().__init__()
+
+        self.convs = torch.nn.ModuleDict(
+            {'vals_cons': v2c_conv,
+             'cons_vals': c2v_conv}
+        )
+        # we use c -> v -> o setting, so o is the final output
+        self.conv_sequence = [('vals_cons',),
+                              ('cons_vals',),]
+        self.sync_conv = sync_conv
+
+    def reset_parameters(self):
+        self.convs['vals_cons'].reset_parameters()
+        self.convs['cons_vals'].reset_parameters()
+
+
+class QPHeteroConv(HeteroConv):
+    def __init__(
+            self,
+            v2v_conv: torch.nn.Module,
+            v2c_conv: torch.nn.Module,
+            c2v_conv: torch.nn.Module,
+            sync_conv: bool = False
+    ):
+        super().__init__()
+
+        self.convs = torch.nn.ModuleDict(
+            {'vals_vals': v2v_conv,
+             'vals_cons': v2c_conv,
+             'cons_vals': c2v_conv}
+        )
+        # we use c -> v -> o setting, so o is the final output
+        self.conv_sequence = [('vals_vals',),
+                              ('vals_cons',),
+                              ('cons_vals',),]
+        self.sync_conv = sync_conv
+
+    def reset_parameters(self):
+        self.convs['vals_vals'].reset_parameters()
+        self.convs['vals_cons'].reset_parameters()
+        self.convs['cons_vals'].reset_parameters()

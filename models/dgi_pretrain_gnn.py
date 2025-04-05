@@ -6,6 +6,7 @@ from models.backbone import Backbone
 
 class DGIPretrainGNN(torch.nn.Module):
     def __init__(self,
+                 is_qp,
                  conv,
                  hid_dim,
                  num_encode_layers,
@@ -17,6 +18,7 @@ class DGIPretrainGNN(torch.nn.Module):
         super().__init__()
 
         self.encoder = Backbone(
+            is_qp,
             conv,
             hid_dim,
             num_encode_layers,
