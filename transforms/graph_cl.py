@@ -2,7 +2,9 @@ from typing import Dict, Tuple
 
 import torch
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import bipartite_subgraph, add_random_edge
+from torch_geometric.utils import subgraph, bipartite_subgraph, add_random_edge
+
+from utils.evaluation import is_qp
 
 
 class GraphCLDropNode:
@@ -44,6 +46,16 @@ class GraphCLDropNode:
             b=data.b[cons_node_mask],
             obj_solution=data.obj_solution,  # this is actually not correct
         )
+
+        if is_qp(data):
+            v2v_edge_index, v2v_edge_attr = subgraph(subset=vals_node_mask,
+                                                     edge_index=data[('vals', 'to', 'vals')].edge_index,
+                                                     edge_attr=data[('vals', 'to', 'vals')].edge_attr,
+                                                     relabel_nodes=True,
+                                                     num_nodes=n)
+            new_data[('vals', 'to', 'vals')].edge_index = v2v_edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = v2v_edge_attr
+
         return new_data
 
 
@@ -86,6 +98,23 @@ class GraphCLPerturbEdge:
             b=data.b,
             obj_solution=data.obj_solution,  # this is actually not correct
         )
+
+        if is_qp(data):
+            edge_index = data[('vals', 'to', 'vals')].edge_index
+            ne = edge_index.shape[1]
+
+            # remove edges
+            edge_mask = torch.rand(ne) > self.p
+            v2v_edge_index = data[('vals', 'to', 'vals')].edge_index[:, edge_mask]
+            v2v_edge_attr = data[('vals', 'to', 'vals')].edge_attr[edge_mask, :]
+
+            # add edges
+            added_v2v_edge_index = add_random_edge(edge_index, p=self.p, num_nodes=n)[1].long()
+            added_v2v_edge_attr = torch.randn(added_edge_index.shape[1], 1)
+
+            new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([v2v_edge_index, added_v2v_edge_index])
+            new_data[('vals', 'to', 'vals')].edge_attr = torch.vstack([v2v_edge_attr, added_v2v_edge_attr])
+
         return new_data
 
 
@@ -119,6 +148,11 @@ class GraphCLMaskNode:
             b=data.b.masked_fill(cons_node_mask, 0),
             obj_solution=data.obj_solution,  # this is actually not correct
         )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = data[('vals', 'to', 'vals')].edge_attr
+
         return new_data
 
 
