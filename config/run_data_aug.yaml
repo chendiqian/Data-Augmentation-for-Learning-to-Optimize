@@ -1,14 +1,19 @@
 data_aug:
+  num_samples: 3
   method:
-    AddRedundantConstraint:
-      strength: 0.5
-      affinity: 3
-    ScaleConstraint:
-      strength: 1.
-    # We should make full use of the labels
     OracleDropInactiveConstraint:
-      strength: 0.3
-
+      strength: 0.5
+    ScaleConstraint:
+      strength: 0.5
+    ScaleCoordinate:
+      strength: 0.5
+    AddRedundantConstraint:
+      strength: 0.6
+      affinity: 3
+#    AddSubOrthogonalConstraint:
+#      strength: 0.
+    AddDumbVariables:
+      strength: 0.
 
 defaults:
   - default_exp
