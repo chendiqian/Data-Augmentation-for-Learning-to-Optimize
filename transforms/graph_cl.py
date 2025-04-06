@@ -110,7 +110,7 @@ class GraphCLPerturbEdge:
 
             # add edges
             added_v2v_edge_index = add_random_edge(edge_index, p=self.p, num_nodes=n)[1].long()
-            added_v2v_edge_attr = torch.randn(added_edge_index.shape[1], 1)
+            added_v2v_edge_attr = torch.randn(added_v2v_edge_index.shape[1], 1)
 
             new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([v2v_edge_index, added_v2v_edge_index])
             new_data[('vals', 'to', 'vals')].edge_attr = torch.vstack([v2v_edge_attr, added_v2v_edge_attr])
