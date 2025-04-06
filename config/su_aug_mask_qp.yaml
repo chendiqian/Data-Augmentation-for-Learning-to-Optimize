@@ -1,0 +1,11 @@
+data_aug:
+  method:
+#     from GraphCL
+    GraphCLMaskNode:
+      strength: 0.05
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - _self_
