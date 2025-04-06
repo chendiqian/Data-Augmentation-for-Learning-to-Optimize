@@ -27,6 +27,7 @@ def main(args: DictConfig):
 
     aug_dict = {aug_class: kwargs.strength for aug_class, kwargs in args.data_aug.method.items() if
                 kwargs.strength > 0.}
+    assert len(aug_dict) >= 1, "At least 1 augmentation!"
     if len(aug_dict) == 1:
         key = list(aug_dict.keys())[0]
         transform = [SingleAugmentWrapper(getattr(transforms, key)(aug_dict[key]))]
