@@ -10,6 +10,7 @@ from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
 from utils.evaluation import is_qp
+from utils.models import count_parameters
 from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
 from trainers.training_loops import supervised_train_eval_loops
@@ -99,6 +100,7 @@ def main(args: DictConfig):
         test_objgaps.append(np.mean(test_obj_gap_across_folds))
 
     wandb.log({
+        'num_params': count_parameters(model),
         'best_val_obj_gap': np.mean(best_val_objgaps),
         'test_obj_gap_mean': np.mean(test_objgaps),
         'test_obj_gap_std': np.std(test_objgaps)

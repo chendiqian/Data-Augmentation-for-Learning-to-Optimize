@@ -45,3 +45,17 @@ def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, tor
     new_edge_index = torch.from_numpy(edge_index).long()
     new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
     return new_edge_index, new_edge_attr
+
+
+def count_parameters(model: torch.nn.Module):
+    """Source: https://stackoverflow.com/a/62508086"""
+    # table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        params = parameter.numel()
+        # table.add_row([name, params])
+        total_params += params
+    # logger.info(f"\n{str(table)}")
+    return total_params
