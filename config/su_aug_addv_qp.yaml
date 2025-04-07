@@ -1,0 +1,11 @@
+data_aug:
+  method:
+    AddDumbVariables:
+      strength: 0.6
+
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - _self_
