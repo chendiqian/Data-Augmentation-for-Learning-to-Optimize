@@ -1,11 +1,9 @@
 from typing import List, Tuple
 import numpy as np
 import torch
-from scipy import sparse as sp
 from torch.nn import functional as F
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import scatter
-from torch_scatter import scatter_sum
 from torch_sparse import SparseTensor, spmm
 
 
@@ -92,20 +90,14 @@ def compute_acc(pred1, pred2):
     return num_corrects
 
 
-def numpy_inactive_contraint_heuristic(A, b, c,):
-    """
-    A heuristic to give the likely inactive constraints. A @ c + b, the smaller, the more likely.
-    An assumption is, for a constraint matrix with shape (m, n) m > n, there are exactly n active ones.
+def inactive_contraint_heuristic(data):
+    if is_qp(data):
+        Q, A, c, b, *_ = recover_qp_from_data(data)
+    else:
+        A, c, b, *_ = recover_lp_from_data(data)
 
-    Args:
-        A:
-        b:
-        c:
-
-    Returns:
-
-    """
     m, n = A.shape
+
     c_normed = c / np.linalg.norm(c, axis=0)
     Anorms = np.linalg.norm(A, axis=1, keepdims=True)
     A_normed = A / Anorms
@@ -115,6 +107,15 @@ def numpy_inactive_contraint_heuristic(A, b, c,):
 
     heur = A_full @ c_normed + b_full
 
+    # Todo: in theory the dist should also be considered
+    # if is_qp(data):
+    #     # the global min of unconstrained programming
+    #     xmin = np.linalg.solve(Q, -c)
+    #     # the distance from the global min to the hyperplane
+    #     dist = np.abs(A_full @ xmin - b_full)
+    #
+    # heur = heur + dist
+
     heur_idx = np.argsort(heur)
     heur_idx = heur_idx[n:]
     heur_idx = heur_idx[heur_idx < m]
@@ -122,84 +123,11 @@ def numpy_inactive_contraint_heuristic(A, b, c,):
     return heur_idx
 
 
-def numpy_inactive_contraint(A, b, x, eps=1.e-6):
-    """
-    Return the inactive constraints where A@x < b strictly holds
-
-    Args:
-        A:
-        b:
-        x:
-        eps:
-
-    Returns:
-
-    """
+def oracle_inactive_constraints(data, eps=1.e-6):
+    # we don't need to recover Q matrix
+    A, c, b, *_ = recover_lp_from_data(data)
+    x = data.x_solution.numpy()
     return np.where(~(np.abs(A @ x - b) < eps))[0]
-
-
-def inactive_contraint_heuristic(c2v_edge_index, c2v_edge_attr, b, c, m, n):
-    """
-    A torch version.
-
-    Args:
-        c2v_edge_index:
-        c2v_edge_attr:
-        b:
-        c:
-        m:
-        n:
-
-    Returns:
-
-    """
-    raise DeprecationWarning
-
-    row, col = c2v_edge_index
-    values = c2v_edge_attr
-
-    Anorms = scatter_sum(values ** 2, row).numpy() ** 0.5
-    c = c.numpy()
-    c = c / np.linalg.norm(c)
-
-    row, col = row.numpy(), col.numpy()
-    values = values.numpy()
-
-    # we assume each row, col is selected at least once
-    A = sp.csr_array((values / Anorms[row], (row, col)), shape=(m, n))
-    A = sp.vstack([A, -sp.eye_array(n, format='csr')])
-    b = np.hstack([b.numpy() / Anorms, np.zeros(n)])
-
-    heur = A @ c + b
-
-    heur_idx = np.argsort(heur)
-    heur_idx = heur_idx[n:]
-    heur_idx = heur_idx[heur_idx < m]
-
-    return heur_idx
-
-
-def oracle_inactive_constraints(solution, c2v_edge_index, c2v_edge_attr, b, eps=1.e-6):
-    """
-    A torch version.
-
-    Args:
-        solution:
-        c2v_edge_index:
-        c2v_edge_attr:
-        b:
-        eps:
-
-    Returns:
-
-    """
-    raise DeprecationWarning
-
-    violations = scatter_sum(c2v_edge_attr * solution[c2v_edge_index[1]], c2v_edge_index[0]) - b
-    active_mask = violations.abs() < eps
-    inactive_mask = ~active_mask
-    inactive_idx = torch.where(inactive_mask)[0]
-    return inactive_idx
 
 
 def is_qp(data: HeteroData):

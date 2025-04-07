@@ -7,7 +7,7 @@ import torch
 from torch_geometric.data import HeteroData
 from torch_scatter import scatter_sum
 
-from utils.evaluation import is_qp
+from utils.evaluation import is_qp, oracle_inactive_constraints, inactive_contraint_heuristic
 from utils.models import drop_cons
 
 
@@ -24,7 +24,12 @@ class OracleDropInactiveConstraint:
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         assert hasattr(data, 'inactive_idx')
-        inactive_idx = data.inactive_idx.numpy()
+
+        if hasattr(data, 'inactive_idx'):
+            inactive_idx = data.inactive_idx.numpy()
+        else:
+            inactive_idx = oracle_inactive_constraints(data)
+
         drop_idx = np.random.choice(inactive_idx, size=min(int(m * self.p), len(inactive_idx)), replace=False)
         c2v_edge_index, c2v_edge_attr = drop_cons(data, drop_idx)
         remain_cons = ~np.isin(np.arange(m), drop_idx)
@@ -72,7 +77,12 @@ class DropInactiveConstraint:
 
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         assert hasattr(data, 'heur_idx')
-        heur_idx = data.heur_idx.numpy()
+
+        if hasattr(data, 'heur_idx'):
+            heur_idx = data.heur_idx.numpy()
+        else:
+            heur_idx = inactive_contraint_heuristic(data)
+
         drop_idx = np.random.choice(heur_idx, size=min(int(m * self.p), len(heur_idx)), replace=False)
         new_edge_index, new_edge_attr = drop_cons(data, drop_idx)
         remain_cons = ~np.isin(np.arange(m), drop_idx)
