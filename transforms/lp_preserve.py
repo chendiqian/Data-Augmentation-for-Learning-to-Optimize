@@ -397,15 +397,11 @@ class AddDumbVariables:
         )
 
         if is_qp(data):
-            row = torch.arange(n)
-            col = torch.full((n,), n, dtype=torch.long)
-            extra_v2v_edge_index = torch.hstack([torch.vstack([row, col]),
-                                                 torch.vstack([col, row]),
-                                                 torch.tensor([[n], [n]], dtype=torch.long)])
-            extra_v2v_edge_attr = torch.rand(n)
-            Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n * n)
-            extra_v2v_edge_attr[np.random.rand(n) > Q_dens] = 0.
-            extra_v2v_edge_attr = torch.hstack([extra_v2v_edge_attr, extra_v2v_edge_attr, torch.rand(1)])
+            # theoretically, if we augment Q to [Q, A.T; A, B] and maintain PSD, it should be B - A.T @ Q_inv @ A >= 0
+            # so we just augment with a diagonal B and A being zeros
+            row = col = torch.arange(num_new_vars) + n
+            extra_v2v_edge_index = torch.vstack([row, col]).long()
+            extra_v2v_edge_attr = torch.rand(num_new_vars)
 
             new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([data[('vals', 'to', 'vals')].edge_index,
                                                                         extra_v2v_edge_index])
