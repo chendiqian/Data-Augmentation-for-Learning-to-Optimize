@@ -1,9 +1,7 @@
 import copy
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
-import numpy as np
 import torch
-from torch_geometric.data import HeteroData
 
 
 def average_weights(weights: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
@@ -32,19 +30,6 @@ def update_moving_average(ema_updater, ma_model, current_model):
     for current_params, ma_params in zip(current_model.parameters(), ma_model.parameters()):
         old_weight, up_weight = ma_params.data, current_params.data
         ma_params.data = ema_updater.update_average(old_weight, up_weight)
-
-
-def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, torch.FloatTensor]:
-    edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
-    keep_edge_mask = ~np.isin(edge_index[0], drop_idx)
-
-    edge_index = edge_index[:, keep_edge_mask]
-    _, remapped_a = np.unique(edge_index[0], return_inverse=True)
-    edge_index[0] = remapped_a
-
-    new_edge_index = torch.from_numpy(edge_index).long()
-    new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
-    return new_edge_index, new_edge_attr
 
 
 def count_parameters(model: torch.nn.Module):

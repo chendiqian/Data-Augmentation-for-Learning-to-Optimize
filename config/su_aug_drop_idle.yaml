@@ -1,0 +1,10 @@
+data_aug:
+  method:
+    OracleDropIdleVariable:
+      strength: 0.99  # we can drop all the inactive constraints
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - _self_

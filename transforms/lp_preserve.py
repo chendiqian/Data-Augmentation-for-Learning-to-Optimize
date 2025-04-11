@@ -1,14 +1,82 @@
 import math
-from typing import Dict
+from typing import Dict, Tuple
 import random
 
 import numpy as np
 import torch
 from torch_geometric.data import HeteroData
+from torch_geometric.utils import subgraph
 from torch_scatter import scatter_sum
 
 from utils.evaluation import is_qp, oracle_inactive_constraints, inactive_contraint_heuristic
-from utils.models import drop_cons
+
+
+def drop_var(data: HeteroData, drop_idx: np.ndarray, remain_vars: np.ndarray):
+    c2v_edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+    keep_edge_mask = ~np.isin(c2v_edge_index[1], drop_idx)  # we drop columns of A matrix
+
+    c2v_edge_index = c2v_edge_index[:, keep_edge_mask]
+    _, remapped_a = np.unique(c2v_edge_index[1], return_inverse=True)
+    c2v_edge_index[1] = remapped_a
+
+    c2v_edge_index = torch.from_numpy(c2v_edge_index).long()
+    c2v_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
+
+    if is_qp(data):
+        v2v_edge_index, v2v_edge_attr = subgraph(subset=torch.from_numpy(remain_vars),
+                                                 edge_index=data[('vals', 'to', 'vals')].edge_index,
+                                                 edge_attr=data[('vals', 'to', 'vals')].edge_attr,
+                                                 relabel_nodes=True,
+                                                 num_nodes=data['vals'].num_nodes)
+    else:
+        v2v_edge_index, v2v_edge_attr = None, None
+
+    return c2v_edge_index, c2v_edge_attr, v2v_edge_index, v2v_edge_attr
+
+
+class OracleDropIdleVariable:
+    """
+    Drop x where x=0
+    """
+
+    def __init__(self, strength=0.1):
+        assert 0 < strength < 1
+        self.p = strength
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        idle_idx = torch.where(data.x_solution.abs() < 1.e-7)[0].numpy()
+
+        drop_idx = np.random.choice(idle_idx, size=min(int(n * self.p), len(idle_idx)), replace=False)
+        remain_vars = ~np.isin(np.arange(n), drop_idx)
+        c2v_edge_index, c2v_edge_attr, v2v_edge_index, v2v_edge_attr = drop_var(data, drop_idx, remain_vars)
+
+        new_data = data.__class__(
+            cons={
+                'num_nodes': m,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': remain_vars.sum().item(),
+                'x': data['vals'].x[remain_vars],
+            },
+            cons__to__vals={'edge_index': c2v_edge_index,
+                            'edge_attr': c2v_edge_attr},
+            q=data.q[remain_vars],
+            b=data.b,
+            obj_solution=data.obj_solution,
+            x_solution=data.x_solution[remain_vars],
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
+        )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = v2v_edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = v2v_edge_attr
+        return new_data
+
+    def __repr__(self):
+        return 'OracleDropInactiveConstraint'
 
 
 class OracleDropInactiveConstraint:
@@ -478,3 +546,16 @@ class ComboInterpolateTransforms(ComboPreservedTransforms):
                 fs.p = random.random() * max_p
                 data = fs(data)
         return data
+
+
+def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, torch.FloatTensor]:
+    edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+    keep_edge_mask = ~np.isin(edge_index[0], drop_idx)
+
+    edge_index = edge_index[:, keep_edge_mask]
+    _, remapped_a = np.unique(edge_index[0], return_inverse=True)
+    edge_index[0] = remapped_a
+
+    new_edge_index = torch.from_numpy(edge_index).long()
+    new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
+    return new_edge_index, new_edge_attr
