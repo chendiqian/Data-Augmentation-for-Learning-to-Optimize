@@ -1,5 +1,6 @@
 from transforms.graph_cl import GraphCLDropNode, GraphCLMaskNode, GraphCLPerturbEdge
 from transforms.lp_preserve import (DropInactiveConstraint,
+                                    OracleDropIdleVariable,
                                     OracleDropInactiveConstraint,
                                     AddRedundantConstraint,
                                     ScaleConstraint, ScaleCoordinate,
