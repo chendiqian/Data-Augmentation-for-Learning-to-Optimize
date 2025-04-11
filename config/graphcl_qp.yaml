@@ -1,0 +1,20 @@
+finetune:
+  modelpath: null
+  whole: true
+
+pretrain:
+  epoch: 500
+  method:
+    GraphCLDropNode:
+      strength: 0.3
+    GraphCLPerturbEdge:
+      strength: 0.17
+    GraphCLMaskNode:
+      strength: 0.15
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - default_pretrain
+  - _self_

@@ -1,0 +1,15 @@
+finetune:
+  modelpath: null
+  whole: true
+
+pretrain:
+  method:
+    RWSubgraph:
+      walk_length: 200
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - default_pretrain
+  - _self_
