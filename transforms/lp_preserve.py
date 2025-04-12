@@ -156,9 +156,6 @@ class DropInactiveConstraint:
         self.p = strength
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        if is_qp(data):
-            raise NotImplementedError
-
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
         assert hasattr(data, 'heur_idx')
 
@@ -189,6 +186,10 @@ class DropInactiveConstraint:
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = data[('vals', 'to', 'vals')].edge_index
+            new_data[('vals', 'to', 'vals')].edge_attr = data[('vals', 'to', 'vals')].edge_attr
         return new_data
 
     def __repr__(self):
