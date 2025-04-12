@@ -1,5 +1,6 @@
 import torch
 from loss_func.gae_regression_loss import gae_regression_loss
+from utils.evaluation import is_qp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -21,11 +22,21 @@ class GAEPretrainer:
 
             vals, cons = model(data)
 
+            if is_qp(data):
+                v2v_edge_index = data[('vals', 'to', 'vals')].edge_index
+                v2v_edge_attr = data[('vals', 'to', 'vals')].edge_attr.squeeze(1)
+                v2v_slice = data._slice_dict[('vals', 'to', 'vals')]['edge_index'].to(device)
+            else:
+                v2v_edge_index = v2v_edge_attr = v2v_slice = None
+
             loss = gae_regression_loss(vals, cons,
                                        data[('cons', 'to', 'vals')].edge_index,
                                        data[('cons', 'to', 'vals')].edge_attr.squeeze(1),
+                                       v2v_edge_index, v2v_edge_attr,
                                        data._slice_dict[('cons', 'to', 'vals')]['edge_index'].to(device),
+                                       v2v_slice,
                                        data.num_graphs)
+
             train_losses += loss.detach() * data.num_graphs
             num_graphs += data.num_graphs
 
