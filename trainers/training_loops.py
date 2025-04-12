@@ -67,9 +67,11 @@ def pretraining_loops(epochs, patience,
         if trainer.patience > patience:
             break
 
+        lr = scheduler.optimizer.param_groups[0]["lr"] if scheduler is not None else optimizer.param_groups[0]["lr"]
+
         stats_dict = {'pretrain_loss': train_loss,
                       'pretrain_acc': train_acc,
-                      'pretrain_lr': scheduler.optimizer.param_groups[0]["lr"]}
+                      'pretrain_lr': lr}
 
         pbar.set_postfix(stats_dict)
         wandb.log(stats_dict)
