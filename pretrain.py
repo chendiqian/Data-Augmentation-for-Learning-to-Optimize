@@ -53,17 +53,17 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
         norm=args.backbone.norm).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.pretrain.lr, weight_decay=args.pretrain.weight_decay)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                     mode='min',
-                                                     factor=0.5,
-                                                     patience=50,
-                                                     min_lr=1.e-5)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
+    #                                                  mode='min',
+    #                                                  factor=0.5,
+    #                                                  patience=50,
+    #                                                  min_lr=1.e-5)
 
     trainer = NTXentPretrainer(args.pretrain.temperature)
 
-    best_model = pretraining_loops(args.pretrain.epoch, args.pretrain.patience, args.exp.ckpt,
+    best_model = pretraining_loops(args.pretrain.epoch, args.pretrain.epoch, args.exp.ckpt,
                                    run_id, log_folder_name,
-                                   trainer, train_loader, device, model, optimizer, scheduler)
+                                   trainer, train_loader, device, model, optimizer, None)
     return best_model
 
 
