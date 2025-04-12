@@ -34,6 +34,22 @@ def drop_var(data: HeteroData, drop_idx: np.ndarray, remain_vars: np.ndarray):
     return c2v_edge_index, c2v_edge_attr, v2v_edge_index, v2v_edge_attr
 
 
+def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, torch.FloatTensor]:
+    edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
+    keep_edge_mask = ~np.isin(edge_index[0], drop_idx)
+
+    edge_index = edge_index[:, keep_edge_mask]
+    _, remapped_a = np.unique(edge_index[0], return_inverse=True)
+    edge_index[0] = remapped_a
+
+    new_edge_index = torch.from_numpy(edge_index).long()
+    new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
+    return new_edge_index, new_edge_attr
+
+
+# todo: implement biasing the Q, A, b, c
+
+
 class OracleDropIdleVariable:
     """
     Drop x where x=0
@@ -76,7 +92,7 @@ class OracleDropIdleVariable:
         return new_data
 
     def __repr__(self):
-        return 'OracleDropInactiveConstraint'
+        return 'OracleDropIdleVariable'
 
 
 class OracleDropInactiveConstraint:
@@ -490,6 +506,11 @@ class ComboPreservedTransforms:
                     'DropInactiveConstraint' in tf_dict and
                     tf_dict['OracleDropInactiveConstraint'] * tf_dict['DropInactiveConstraint'] > 0), "Cannot both"
 
+        if 'OracleDropIdleVariable' in tf_dict and tf_dict['OracleDropIdleVariable'] > 0:
+            self.oracle_drop_v = OracleDropIdleVariable(tf_dict['OracleDropIdleVariable'])
+        else:
+            self.oracle_drop_v = None
+
         if 'OracleDropInactiveConstraint' in tf_dict and tf_dict['OracleDropInactiveConstraint'] > 0:
             self.oracle_drop_c = OracleDropInactiveConstraint(tf_dict['OracleDropInactiveConstraint'])
         else:
@@ -521,7 +542,10 @@ class ComboPreservedTransforms:
             self.add_v = None
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        for fs in [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]:
+        for fs in [self.oracle_drop_v,
+                   self.oracle_drop_c, self.drop_c,
+                   self.add_c, self.scale_c,
+                   self.scale_v, self.add_v]:
             if fs is not None:
                 data = fs(data)
         return data
@@ -534,7 +558,10 @@ class ComboInterpolateTransforms(ComboPreservedTransforms):
         self.num_samples = num_samples
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        tf_list = [self.oracle_drop_c, self.drop_c, self.add_c, self.scale_c, self.scale_v, self.add_v]
+        tf_list = [self.oracle_drop_v,
+                   self.oracle_drop_c, self.drop_c,
+                   self.add_c, self.scale_c,
+                   self.scale_v, self.add_v]
         if self.num_samples == -1:
             selected_idx = np.arange(len(tf_list))
         else:
@@ -546,16 +573,3 @@ class ComboInterpolateTransforms(ComboPreservedTransforms):
                 fs.p = random.random() * max_p
                 data = fs(data)
         return data
-
-
-def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, torch.FloatTensor]:
-    edge_index = data[('cons', 'to', 'vals')].edge_index.numpy()
-    keep_edge_mask = ~np.isin(edge_index[0], drop_idx)
-
-    edge_index = edge_index[:, keep_edge_mask]
-    _, remapped_a = np.unique(edge_index[0], return_inverse=True)
-    edge_index[0] = remapped_a
-
-    new_edge_index = torch.from_numpy(edge_index).long()
-    new_edge_attr = data[('cons', 'to', 'vals')].edge_attr[keep_edge_mask]
-    return new_edge_index, new_edge_attr
