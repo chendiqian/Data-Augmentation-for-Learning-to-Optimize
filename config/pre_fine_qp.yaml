@@ -6,17 +6,15 @@ finetune:
 pretrain:
   epoch: 800
   method:
-    DropInactiveConstraint:
-      strength: 0.046
     ScaleConstraint:
-      strength: 0.4
+      strength: 1.
     ScaleCoordinate:
-      strength: 1.07
+      strength: 1.
     AddRedundantConstraint:
-      strength: 0.36
+      strength: 0.06
       affinity: 3
     AddDumbVariables:
-      strength: 0.46
+      strength: 0.38
 
 defaults:
   - default_exp
