@@ -7,6 +7,8 @@ import torch
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import subgraph
 from torch_scatter import scatter_sum
+from sklearn.datasets import make_sparse_spd_matrix
+from scipy.sparse import random_array
 
 from utils.evaluation import is_qp, oracle_inactive_constraints, inactive_contraint_heuristic
 
@@ -47,7 +49,68 @@ def drop_cons(data: HeteroData, drop_idx: np.ndarray) -> Tuple[torch.Tensor, tor
     return new_edge_index, new_edge_attr
 
 
-# todo: implement biasing the Q, A, b, c
+class OracleBiasProblem:
+    def __init__(self, strength=0.1):
+        assert strength > 0.
+        self.p = strength
+
+    def __call__(self, data: HeteroData) -> HeteroData:
+        m, n = data['cons'].num_nodes, data['vals'].num_nodes
+        assert is_qp(data)
+
+        Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n ** 2)
+        A_dens = data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n)
+
+        Q_bias = make_sparse_spd_matrix(n_dim=n, alpha=1 - Q_dens * self.p / 2.,
+                                        smallest_coef=0.1, largest_coef=0.9, sparse_format='coo')
+        extra_v2v_edge_index = torch.from_numpy(np.vstack([Q_bias.row, Q_bias.col])).long()
+        extra_v2v_edge_attr = torch.from_numpy(Q_bias.data).float()[:, None]
+
+        A_bias = random_array((m, n), density=A_dens, format='coo')
+        extra_c2v_edge_index = torch.from_numpy(np.vstack([A_bias.row, A_bias.col])).long()
+        extra_c2v_edge_attr = torch.from_numpy(A_bias.data).float()[:, None]
+
+        solution = data.x_solution.numpy()
+        Qx = Q_bias @ solution
+        q_bias = A_bias.T @ data.duals.numpy() - Qx
+        new_q = data.q.numpy() + q_bias
+        new_b = data.b.numpy() + A_bias @ solution
+
+        obj = data.obj_solution + 0.5 * solution @ Qx + q_bias @ solution
+
+        # we don't have to coalesce, as we use add aggregation in message passing
+        new_data = data.__class__(
+            cons={
+                'num_nodes': m,
+                'x': data['cons'].x,
+            },
+            vals={
+                'num_nodes': n,
+                'x': data['vals'].x,
+            },
+            cons__to__vals={'edge_index': torch.hstack([data[('cons', 'to', 'vals')].edge_index,
+                                                        extra_c2v_edge_index]),
+                            'edge_attr': torch.vstack([data[('cons', 'to', 'vals')].edge_attr,
+                                                       extra_c2v_edge_attr])},
+            q=torch.from_numpy(new_q).float(),
+            b=torch.from_numpy(new_b).float(),
+            obj_solution=obj,
+            x_solution=data.x_solution,
+            duals=data.duals,
+            inactive_idx=data.inactive_idx,
+            heur_idx=data.heur_idx,
+        )
+
+        if is_qp(data):
+            new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([data[('vals', 'to', 'vals')].edge_index,
+                                                                        extra_v2v_edge_index])
+            new_data[('vals', 'to', 'vals')].edge_attr = torch.vstack([data[('vals', 'to', 'vals')].edge_attr,
+                                                                       extra_v2v_edge_attr])
+
+        return new_data
+
+    def __repr__(self):
+        return "OracleBiasProblem"
 
 
 class OracleDropIdleVariable:
@@ -82,6 +145,7 @@ class OracleDropIdleVariable:
             b=data.b,
             obj_solution=data.obj_solution,
             x_solution=data.x_solution[remain_vars],
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -133,6 +197,7 @@ class OracleDropInactiveConstraint:
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -183,6 +248,7 @@ class DropInactiveConstraint:
             b=data.b[remain_cons],
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -246,6 +312,7 @@ class AddRedundantConstraint:
             b=torch.hstack([data.b, new_b]),
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -298,6 +365,7 @@ class ScaleConstraint:
             b=new_b,
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -349,6 +417,7 @@ class ScaleCoordinate:
             b=data.b,
             obj_solution=data.obj_solution,
             x_solution=data.x_solution / scales,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -390,7 +459,7 @@ class AddSubOrthogonalConstraint:
             free_values = torch.randn(num_new, sparsity - 1)
             # so that each A @ c = rand > 0
             last_values = ((torch.rand(num_new) - (
-                        c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1))
+                    c[col[:, :-1].reshape(-1)].reshape(num_new, sparsity - 1) * free_values).sum(1))
                            / c[col[:, -1]])
             values = torch.cat([free_values, last_values[:, None]], dim=1)
             values /= values.max(dim=1, keepdim=True).values
@@ -427,6 +496,7 @@ class AddSubOrthogonalConstraint:
             b=new_b,
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
@@ -477,6 +547,7 @@ class AddDumbVariables:
             b=data.b,
             obj_solution=data.obj_solution,
             x_solution=data.x_solution,
+            duals=data.duals,
             inactive_idx=data.inactive_idx,
             heur_idx=data.heur_idx,
         )
