@@ -1,10 +1,37 @@
 from typing import List, Tuple
+
+import gurobipy as gp
 import numpy as np
 import torch
+from gurobipy import GRB
 from torch.nn import functional as F
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import scatter
 from torch_sparse import SparseTensor, spmm
+
+
+def gurobi_solve_qp(Q, A, b, c, lb=0.):
+    m, n = A.shape
+    model = gp.Model("qp")
+    model.Params.LogToConsole = 0
+    variables = model.addMVar(n, lb=lb)
+
+    # Objective: 0.5 x^T P x + q^T x
+    model.setObjective(0.5 * variables @ Q @ variables + c @ variables)
+
+    # Add inequality constraints
+    constrs = model.addConstr(A @ variables <= b)
+
+    # Solve
+    model.optimize()
+
+    # Duals
+    if model.status == GRB.OPTIMAL:
+        duals = constrs.getAttr("Pi")
+        solution = variables.X
+    else:
+        duals = solution = None
+    return solution, duals
 
 
 def recover_lp_from_data(data, dtype=np.float32):
@@ -14,7 +41,7 @@ def recover_lp_from_data(data, dtype=np.float32):
     A = SparseTensor(row=data['cons', 'to', 'vals'].edge_index[0],
                      col=data['cons', 'to', 'vals'].edge_index[1],
                      value=data['cons', 'to', 'vals'].edge_attr.squeeze(),
-                     sparse_sizes=(data['cons'].num_nodes, data['vals'].num_nodes)).to_dense().numpy().astype(dtype)
+                     sparse_sizes=(data['cons'].num_nodes, data['vals'].num_nodes)).to_scipy('csr').toarray().astype(dtype)
     # todo: might vary
     lb = np.zeros(A.shape[1]).astype(dtype)
     ub = None
@@ -28,11 +55,11 @@ def recover_qp_from_data(data, dtype=np.float32):
     A = SparseTensor(row=data['cons', 'to', 'vals'].edge_index[0],
                      col=data['cons', 'to', 'vals'].edge_index[1],
                      value=data['cons', 'to', 'vals'].edge_attr.squeeze(),
-                     sparse_sizes=(data['cons'].num_nodes, data['vals'].num_nodes)).to_dense().numpy().astype(dtype)
+                     sparse_sizes=(data['cons'].num_nodes, data['vals'].num_nodes)).to_scipy('csr').toarray().astype(dtype)
     P = SparseTensor(row=data['vals', 'to', 'vals'].edge_index[0],
                      col=data['vals', 'to', 'vals'].edge_index[1],
                      value=data['vals', 'to', 'vals'].edge_attr.squeeze(),
-                     sparse_sizes=(data['vals'].num_nodes, data['vals'].num_nodes)).to_dense().numpy().astype(dtype)
+                     sparse_sizes=(data['vals'].num_nodes, data['vals'].num_nodes)).to_scipy('csr').toarray().astype(dtype)
     # todo: might vary
     lb = np.zeros(A.shape[1]).astype(dtype)
     ub = None
