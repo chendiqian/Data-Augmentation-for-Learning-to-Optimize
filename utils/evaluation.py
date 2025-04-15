@@ -122,7 +122,12 @@ def inactive_contraint_heuristic(data):
         Q, A, c, b, *_ = recover_qp_from_data(data)
     else:
         A, c, b, *_ = recover_lp_from_data(data)
+        Q = None
 
+    return data_contraint_heuristic(Q, A, b, c)
+
+
+def data_contraint_heuristic(Q, A, b, c):
     m, n = A.shape
 
     c_normed = c / np.linalg.norm(c, axis=0)
@@ -154,7 +159,11 @@ def oracle_inactive_constraints(data, eps=1.e-6):
     # we don't need to recover Q matrix
     A, c, b, *_ = recover_lp_from_data(data)
     x = data.x_solution.numpy()
-    return np.where(~(np.abs(A @ x - b) < eps))[0]
+    return data_inactive_constraints(A, b, x, eps)
+
+
+def data_inactive_constraints(A, b, solution, eps=1.e-6):
+    return np.where(~(np.abs(A @ solution - b) < eps))[0]
 
 
 def is_qp(data: HeteroData):
