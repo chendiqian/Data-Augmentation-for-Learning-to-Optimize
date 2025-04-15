@@ -1,16 +1,44 @@
 from typing import List, Tuple
 
-import gurobipy as gp
 import numpy as np
 import torch
-from gurobipy import GRB
 from torch.nn import functional as F
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import scatter
 from torch_sparse import SparseTensor, spmm
 
 
+def gurobi_solve_lp(A, b, c, lb=0.):
+    import gurobipy as gp
+    from gurobipy import GRB
+
+    m, n = A.shape
+    model = gp.Model("lp")
+    model.Params.LogToConsole = 0
+    variables = model.addMVar(n, lb=lb)
+
+    # Objective: 0.5 x^T P x + q^T x
+    model.setObjective(c @ variables, GRB.MINIMIZE)
+
+    # Add inequality constraints
+    constrs = model.addConstr(A @ variables <= b)
+
+    # Solve
+    model.optimize()
+
+    # Duals
+    if model.status == GRB.OPTIMAL:
+        duals = constrs.getAttr("Pi")
+        solution = variables.X
+    else:
+        duals = solution = None
+    return solution, duals
+
+
 def gurobi_solve_qp(Q, A, b, c, lb=0.):
+    import gurobipy as gp
+    from gurobipy import GRB
+
     m, n = A.shape
     model = gp.Model("qp")
     model.Params.LogToConsole = 0
