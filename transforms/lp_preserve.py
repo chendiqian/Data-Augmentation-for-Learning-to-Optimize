@@ -64,6 +64,7 @@ class OracleBiasProblem:
             Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n ** 2)
             Q_bias = make_sparse_spd_matrix(n_dim=n, alpha=1 - Q_dens * self.p / 2.,
                                             smallest_coef=0.1, largest_coef=0.9, sparse_format='coo')
+            Q_bias /= Q_bias.max()
             extra_v2v_edge_index = torch.from_numpy(np.vstack([Q_bias.row, Q_bias.col])).long()
             extra_v2v_edge_attr = torch.from_numpy(Q_bias.data).float()[:, None]
             Qx = Q_bias @ solution
@@ -71,7 +72,8 @@ class OracleBiasProblem:
             Qx = np.zeros_like(solution)
 
         A_dens = data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n)
-        A_bias = random_array((m, n), density=A_dens, format='coo')
+        # otherwise it is too negative obj
+        A_bias = -random_array((m, n), density=A_dens, format='coo')
         extra_c2v_edge_index = torch.from_numpy(np.vstack([A_bias.row, A_bias.col])).long()
         extra_c2v_edge_attr = torch.from_numpy(A_bias.data).float()[:, None]
 
