@@ -56,22 +56,25 @@ class OracleBiasProblem:
 
     def __call__(self, data: HeteroData) -> HeteroData:
         m, n = data['cons'].num_nodes, data['vals'].num_nodes
-        assert is_qp(data)
+        _is_qp = is_qp(data)
 
-        Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n ** 2)
+        solution = data.x_solution.numpy()
+
+        if _is_qp:
+            Q_dens = data[('vals', 'to', 'vals')].edge_index.shape[1] / (n ** 2)
+            Q_bias = make_sparse_spd_matrix(n_dim=n, alpha=1 - Q_dens * self.p / 2.,
+                                            smallest_coef=0.1, largest_coef=0.9, sparse_format='coo')
+            extra_v2v_edge_index = torch.from_numpy(np.vstack([Q_bias.row, Q_bias.col])).long()
+            extra_v2v_edge_attr = torch.from_numpy(Q_bias.data).float()[:, None]
+            Qx = Q_bias @ solution
+        else:
+            Qx = np.zeros_like(solution)
+
         A_dens = data[('cons', 'to', 'vals')].edge_index.shape[1] / (m * n)
-
-        Q_bias = make_sparse_spd_matrix(n_dim=n, alpha=1 - Q_dens * self.p / 2.,
-                                        smallest_coef=0.1, largest_coef=0.9, sparse_format='coo')
-        extra_v2v_edge_index = torch.from_numpy(np.vstack([Q_bias.row, Q_bias.col])).long()
-        extra_v2v_edge_attr = torch.from_numpy(Q_bias.data).float()[:, None]
-
         A_bias = random_array((m, n), density=A_dens, format='coo')
         extra_c2v_edge_index = torch.from_numpy(np.vstack([A_bias.row, A_bias.col])).long()
         extra_c2v_edge_attr = torch.from_numpy(A_bias.data).float()[:, None]
 
-        solution = data.x_solution.numpy()
-        Qx = Q_bias @ solution
         q_bias = A_bias.T @ data.duals.numpy() - Qx
         new_q = data.q.numpy() + q_bias
         new_b = data.b.numpy() + A_bias @ solution
@@ -101,7 +104,7 @@ class OracleBiasProblem:
             heur_idx=data.heur_idx,
         )
 
-        if is_qp(data):
+        if _is_qp:
             new_data[('vals', 'to', 'vals')].edge_index = torch.hstack([data[('vals', 'to', 'vals')].edge_index,
                                                                         extra_v2v_edge_index])
             new_data[('vals', 'to', 'vals')].edge_attr = torch.vstack([data[('vals', 'to', 'vals')].edge_attr,
