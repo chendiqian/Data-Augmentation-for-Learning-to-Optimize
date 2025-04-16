@@ -635,10 +635,13 @@ class ComboInterpolateTransforms(ComboPreservedTransforms):
         self.num_samples = num_samples
 
     def __call__(self, data: HeteroData) -> HeteroData:
-        tf_list = [self.oracle_drop_v,
-                   self.oracle_drop_c, self.drop_c,
-                   self.add_c, self.scale_c,
-                   self.scale_v, self.add_v]
+        full_tf_list = [self.oracle_drop_v,
+                        self.oracle_drop_c, self.drop_c,
+                        self.add_c, self.scale_c,
+                        self.scale_v, self.add_v]
+        tf_list = [tf for tf in full_tf_list if tf is not None]
+        assert len(tf_list)
+
         if self.num_samples == -1:
             selected_idx = np.arange(len(tf_list))
         else:
