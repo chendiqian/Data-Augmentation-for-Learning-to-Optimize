@@ -7,16 +7,16 @@ pretrain:
   epoch: 1000
   method:
     DropInactiveConstraint:
-      strength: 0.1
+      strength: 0.07
     ScaleConstraint:
-      strength: 1.
+      strength: 1.03
     ScaleCoordinate:
-      strength: 1.
+      strength: 0.65
     AddRedundantConstraint:
-      strength: 0.4
+      strength: 0.33
       affinity: 3
     AddDumbVariables:
-      strength: 0.2
+      strength: 0.26
 
 defaults:
   - default_exp
