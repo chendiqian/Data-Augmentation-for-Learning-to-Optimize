@@ -1,6 +1,8 @@
 data_aug:
-  num_samples: 3
+  num_samples: 2
   method:
+    OracleDropIdleVariable:
+      strength: 0.
     OracleDropInactiveConstraint:
       strength: 0.5
     ScaleConstraint:
@@ -10,8 +12,6 @@ data_aug:
     AddRedundantConstraint:
       strength: 0.6
       affinity: 3
-#    AddSubOrthogonalConstraint:
-#      strength: 0.
     AddDumbVariables:
       strength: 0.
 
