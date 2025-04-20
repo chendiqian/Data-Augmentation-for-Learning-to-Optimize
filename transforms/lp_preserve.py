@@ -575,7 +575,8 @@ class AddDumbVariables:
 
 
 class ComboPreservedTransforms:
-    def __init__(self, tf_dict: Dict):
+    def __init__(self, tf_dict: Dict, num_samples: int, interpolate: bool = False):
+        self.tf_dict = tf_dict
         strengths = tf_dict.values()
         assert max(strengths) > 0, "At least 1 transformation!"
 
@@ -618,21 +619,8 @@ class ComboPreservedTransforms:
         else:
             self.add_v = None
 
-    def __call__(self, data: HeteroData) -> HeteroData:
-        for fs in [self.oracle_drop_v,
-                   self.oracle_drop_c, self.drop_c,
-                   self.add_c, self.scale_c,
-                   self.scale_v, self.add_v]:
-            if fs is not None:
-                data = fs(data)
-        return data
-
-
-class ComboInterpolateTransforms(ComboPreservedTransforms):
-    def __init__(self, tf_dict: Dict, num_samples: int):
-        super().__init__(tf_dict)
-        self.tf_dict = tf_dict
         self.num_samples = num_samples
+        self.interpolate = interpolate
 
     def __call__(self, data: HeteroData) -> HeteroData:
         full_tf_list = [self.oracle_drop_v,
@@ -642,14 +630,18 @@ class ComboInterpolateTransforms(ComboPreservedTransforms):
         tf_list = [tf for tf in full_tf_list if tf is not None]
         assert len(tf_list)
 
-        if self.num_samples == -1:
+        if self.num_samples == -1 or self.num_samples >= len(tf_list):
             selected_idx = np.arange(len(tf_list))
         else:
-            selected_idx = np.random.choice(len(tf_list), min(self.num_samples, len(tf_list)), replace=False)
+            selected_idx = np.random.choice(len(tf_list), self.num_samples, replace=False)
+            selected_idx = np.sort(selected_idx)
 
-        for i, fs in enumerate(tf_list):
-            if fs is not None and i in selected_idx:
+        for i in selected_idx:
+            fs = tf_list[i]
+
+            if self.interpolate:
                 max_p = self.tf_dict[str(fs)]
                 fs.p = random.random() * max_p
-                data = fs(data)
+
+            data = fs(data)
         return data

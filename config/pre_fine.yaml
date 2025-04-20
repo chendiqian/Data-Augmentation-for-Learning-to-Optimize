@@ -4,6 +4,7 @@ finetune:
   folds: 10
 
 pretrain:
+  num_samples: -1
   epoch: 800
   method:
     DropInactiveConstraint:

@@ -4,7 +4,8 @@ finetune:
   folds: 10
 
 pretrain:
-  epoch: 1000
+  num_samples: -1
+  epoch: 800
   method:
     DropInactiveConstraint:
       strength: 0.07
