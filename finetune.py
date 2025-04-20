@@ -111,7 +111,17 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
             val_loader = DataLoader(val_ds, batch_size=args.finetune.batchsize, shuffle=False)
             test_loader = DataLoader(test_ds, batch_size=args.finetune.batchsize, shuffle=False)
 
-            model = MLP([args.backbone.hidden] * args.finetune.num_pred_layers + [1], norm=None).to(device)
+            class MLPWithSqueeze(torch.nn.Module):
+                def __init__(self):
+                    super().__init__()
+                    self.mlp = MLP([args.backbone.hidden] * args.finetune.num_pred_layers + [1], norm=None).to(device)
+
+                def forward(self, x):
+                    x = self.mlp(x)
+                    x = x.squeeze(-1)
+                    return x
+
+            model = MLPWithSqueeze().to(device)
             trainer = LinearTrainer()
 
         optimizer = optim.Adam(model.parameters(), lr=args.finetune.lr, weight_decay=args.finetune.weight_decay)

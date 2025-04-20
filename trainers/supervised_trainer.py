@@ -65,8 +65,8 @@ class LinearTrainer(PlainGNNTrainer):
             data = data.to(device)
             label = label.to(device)
             loss = self.train_step(data, label, model, optimizer)
-            train_losses += loss * data.num_graphs
-            num_graphs += data.num_graphs
+            train_losses += loss * label.shape[0]
+            num_graphs += label.shape[0]
             train_losses += loss * data.shape[0]
             num_graphs += data.shape[0]
 
@@ -79,7 +79,7 @@ class LinearTrainer(PlainGNNTrainer):
         objgaps = []
         for i, (data, label) in enumerate(dataloader):
             data = data.to(device)
-            obj_gap = self.val_step(data, data.obj_solution, model)
+            obj_gap = self.val_step(data, label, model)
             objgaps.append(obj_gap)
 
         objgaps = torch.cat(objgaps, dim=0).mean().item()
