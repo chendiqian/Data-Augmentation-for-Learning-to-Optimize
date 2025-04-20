@@ -20,7 +20,7 @@ from transforms.wrapper import DuoAugmentWrapper
 def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
     aug_dict = {aug_class: kwargs.strength for aug_class, kwargs in args.pretrain.method.items() if
                 kwargs.strength > 0.}
-    transform = [DuoAugmentWrapper(ComboPreservedTransforms(aug_dict))]
+    transform = [DuoAugmentWrapper(ComboPreservedTransforms(aug_dict, args.pretrain.num_samples, False))]
 
     # Don't use GCNnorm during pretraining! It makes the pretraining converge too fast!
     if 'gcn' in args.backbone.conv:
