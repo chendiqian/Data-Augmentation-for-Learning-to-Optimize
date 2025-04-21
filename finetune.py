@@ -51,23 +51,22 @@ def finetune(args: DictConfig, log_folder_name: str = None, run_id: int = 0, pre
         valid_set = valid_set[:20]
         test_set = test_set[:20]
 
-    val_loader = DataLoader(valid_set,
-                            batch_size=args.finetune.batchsize,
-                            shuffle=False,
-                            collate_fn=collate_fn_lp_base,
-                            pin_memory=True)
-    test_loader = DataLoader(test_set,
-                             batch_size=args.finetune.batchsize,
-                             shuffle=False,
-                             collate_fn=collate_fn_lp_base,
-                             pin_memory=True)
-
     ndata_per_fold = int(len(train_set) * args.finetune.train_frac)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     best_val_obj_gap_across_folds = []
     test_obj_gap_across_folds = []
 
     for _fold in range(max_folds):
+        val_loader = DataLoader(valid_set,
+                                batch_size=args.finetune.batchsize,
+                                shuffle=False,
+                                collate_fn=collate_fn_lp_base,
+                                pin_memory=True)
+        test_loader = DataLoader(test_set,
+                                 batch_size=args.finetune.batchsize,
+                                 shuffle=False,
+                                 collate_fn=collate_fn_lp_base,
+                                 pin_memory=True)
         train_subset = train_set[_fold * ndata_per_fold: (_fold + 1) * ndata_per_fold]
         if args.exp.debug:
             train_subset = train_subset[:20]
