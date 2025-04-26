@@ -35,20 +35,22 @@ def gurobi_solve_lp(A, b, c, lb=0.):
     return solution, duals
 
 
-def gurobi_solve_qp(Q, A, b, c, lb=0.):
+def gurobi_solve_qp(Q, c, Aub, bub, Aeq=None, beq=None, lb=0., ub=float('inf')):
     import gurobipy as gp
     from gurobipy import GRB
 
-    m, n = A.shape
+    _, n = Aub.shape
     model = gp.Model("qp")
     model.Params.LogToConsole = 0
-    variables = model.addMVar(n, lb=lb)
+    variables = model.addMVar(n, lb=lb, ub=ub)
 
     # Objective: 0.5 x^T P x + q^T x
     model.setObjective(0.5 * variables @ Q @ variables + c @ variables)
 
     # Add inequality constraints
-    constrs = model.addConstr(A @ variables <= b)
+    constrs = model.addConstr(Aub @ variables <= bub)
+    if Aeq is not None:
+        constrs2 = model.addConstr(Aeq @ variables == beq)
 
     # Solve
     model.optimize()
@@ -56,6 +58,8 @@ def gurobi_solve_qp(Q, A, b, c, lb=0.):
     # Duals
     if model.status == GRB.OPTIMAL:
         duals = constrs.getAttr("Pi")
+        if Aeq is not None:
+            duals = np.hstack([duals, constrs2.getAttr("Pi")])
         solution = variables.X
     else:
         duals = solution = None
