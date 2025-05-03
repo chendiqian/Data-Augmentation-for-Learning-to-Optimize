@@ -5,6 +5,8 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch_geometric.transforms import Compose
 
+import wandb
+import numpy as np
 from data.collate_func import collate_pos_pair
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
@@ -61,11 +63,14 @@ def pretrain(args: DictConfig, log_folder_name: str = None, run_id: int = 0):
 
     trainer = NTXentPretrainer(args.pretrain.temperature)
 
-    best_model = pretraining_loops(args.pretrain.epoch, args.pretrain.epoch, args.exp.ckpt,
+    times = pretraining_loops(args.pretrain.epoch, args.pretrain.epoch, args.exp.ckpt,
                                    run_id, log_folder_name,
                                    trainer, train_loader, device, model, optimizer, None)
-    return best_model
 
+    wandb.log({
+        'time_mean': np.mean(times),
+        'time_std': np.std(times),
+    })
 
 @hydra.main(version_base=None, config_path='./config', config_name="pre_fine")
 def main(args: DictConfig):

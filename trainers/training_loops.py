@@ -26,37 +26,14 @@ def pretraining_loops(epochs, patience,
                       ckpt, run_id, log_folder_name,
                       trainer, train_loader, device, model, optimizer, scheduler):
     pbar = tqdm(range(epochs))
-    best_model = copy.deepcopy(model.encoder.state_dict())
+    times = []
     for epoch in pbar:
-        train_loss, train_acc = trainer.train(train_loader, model, optimizer)
+        t1 = time.time()
+        _ = trainer.train(train_loader, model, optimizer)
 
-        if scheduler is not None:
-            scheduler.step(train_loss)
-
-        if trainer.best_loss > train_loss:
-            trainer.patience = 0
-            trainer.best_loss = train_loss
-            best_model = copy.deepcopy(model.encoder.state_dict())
-            if ckpt:
-                torch.save(model.encoder.state_dict(), os.path.join(log_folder_name, f'pretrain_best_model{run_id}.pt'))
-        else:
-            trainer.patience += 1
-
-        if ckpt and epoch % 100 == 99:
-            torch.save(model.encoder.state_dict(), os.path.join(log_folder_name, f'pretrain_model_epoch{epoch}.pt'))
-
-        if trainer.patience > patience:
-            break
-
-        lr = scheduler.optimizer.param_groups[0]["lr"] if scheduler is not None else optimizer.param_groups[0]["lr"]
-
-        stats_dict = {'pretrain_loss': train_loss,
-                      'pretrain_acc': train_acc,
-                      'pretrain_lr': lr}
-
-        pbar.set_postfix(stats_dict)
-        wandb.log(stats_dict)
-    return best_model
+        if epoch > 3:
+            times.append(time.time() - t1)
+    return times
 
 
 def siamese_pretraining_loops(epochs, patience,

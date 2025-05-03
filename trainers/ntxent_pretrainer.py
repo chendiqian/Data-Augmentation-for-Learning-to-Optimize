@@ -1,8 +1,6 @@
 import torch
 from pytorch_metric_learning.losses import NTXentLoss
 
-from utils.evaluation import compute_acc
-
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -21,7 +19,6 @@ class NTXentPretrainer:
 
         train_losses = 0.
         num_graphs = 0
-        corrects = 0
         for i, (data1, data2) in enumerate(dataloader):
             optimizer.zero_grad()
             data1 = data1.to(device)
@@ -44,6 +41,4 @@ class NTXentPretrainer:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
             optimizer.step()
 
-            corrects += compute_acc(pred1, pred2)
-
-        return train_losses.item() / num_graphs, corrects.item() / num_graphs
+        return train_losses.item() / num_graphs
