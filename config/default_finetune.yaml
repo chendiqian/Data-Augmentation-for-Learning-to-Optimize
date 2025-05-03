@@ -7,3 +7,4 @@ finetune:
   batchsize: 32
   train_frac: 1.
   num_pred_layers: 1
+  num_workers: 0

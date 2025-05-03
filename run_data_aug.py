@@ -67,6 +67,7 @@ def main(args: DictConfig):
             train_loader = DataLoader(train_subset,
                                       batch_size=args.finetune.batchsize,
                                       shuffle=True,
+                                      num_workers=args.finetune.num_workers,
                                       collate_fn=collate_fn_lp_base,
                                       pin_memory=True)
 
