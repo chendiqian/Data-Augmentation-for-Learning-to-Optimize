@@ -238,7 +238,7 @@ def generate_indset(graph, nnodes):
         if node not in used_nodes:
             inequalities.add((node,))
 
-    c = -np.ones(len(graph))
+    c = -np.random.rand(len(graph))
     A, b = np.zeros((len(inequalities), len(graph))), np.ones(len(inequalities))
     for ineq, group in enumerate(inequalities):
         A[ineq, sorted(group)] = 1.
@@ -475,10 +475,12 @@ def generate_capacited_facility_location(n_customers, n_facilities, ratio, rng):
         A.append(row)
         b.append(1)
 
-    A_eq = np.array(A)
-    b_eq = np.array(b)
+    # A_eq = np.array(A)
+    # b_eq = np.array(b)
+    A.append(np.concatenate([np.zeros(n_customers * n_facilities), capacities]))
+    b.append(total_demand)
 
-    A, b = [], []
+    # A, b = [], []
     # sum_i demand_i * x_ij - volume_j * y_j <= 0
     for j in range(n_facilities):
         row = np.zeros((n_customers, n_facilities))
@@ -503,4 +505,4 @@ def generate_capacited_facility_location(n_customers, n_facilities, ratio, rng):
             b.append(0)
 
     A_ub, b_ub = -np.array(A), -np.array(b)
-    return A_eq, b_eq, A_ub, b_ub, c
+    return A_ub, b_ub, c
