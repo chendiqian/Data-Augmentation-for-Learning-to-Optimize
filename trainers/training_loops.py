@@ -17,7 +17,8 @@ def supervised_train_eval_loops(epochs, patience,
     for epoch in pbar:
         t1 = time.time()
         train_loss = trainer.train(train_loader, model, optimizer)
-        times.append(time.time() - t1)
+        if epoch > 3:
+            times.append(time.time() - t1)
     return times
 
 

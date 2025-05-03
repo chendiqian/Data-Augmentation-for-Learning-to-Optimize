@@ -48,37 +48,22 @@ def main(args: DictConfig):
 
     train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
     valid_set = LPDataset(args.exp.datapath, 'valid', transform=extra_transform)
-    test_set = LPDataset(args.exp.datapath, 'test', transform=extra_transform)
 
     if args.exp.debug:
         valid_set = valid_set[:20]
-        test_set = test_set[:20]
 
     val_loader = DataLoader(valid_set,
                             batch_size=args.finetune.batchsize,
                             shuffle=False,
                             collate_fn=collate_fn_lp_base,
                             pin_memory=True)
-    test_loader = DataLoader(test_set,
-                             batch_size=args.finetune.batchsize,
-                             shuffle=False,
-                             collate_fn=collate_fn_lp_base,
-                             pin_memory=True)
-
     ndata_per_fold = int(len(train_set) * args.finetune.train_frac)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    best_val_objgaps = []
-    test_objgaps = []
 
     for run in range(args.exp.runs):
-        best_val_obj_gap_across_folds = []
-        test_obj_gap_across_folds = []
-
         for _fold in range(max_folds):
             train_subset = train_set[_fold * ndata_per_fold: (_fold + 1) * ndata_per_fold]
-            if args.exp.debug:
-                train_subset = train_subset[:20]
             train_loader = DataLoader(train_subset,
                                       batch_size=args.finetune.batchsize,
                                       shuffle=True,
@@ -104,22 +89,13 @@ def main(args: DictConfig):
 
             trainer = PlainGNNTrainer()
 
-            best_model = supervised_train_eval_loops(args.finetune.epoch, args.finetune.patience, args.exp.ckpt,
+            times = supervised_train_eval_loops(args.finetune.epoch, args.finetune.patience, args.exp.ckpt,
                                                      run, _fold, log_folder_name,
                                                      trainer, train_loader, val_loader, device, model, optimizer, scheduler)
-            model.load_state_dict(best_model)
-            test_obj_gap = trainer.eval(test_loader, model)
-
-            best_val_obj_gap_across_folds.append(trainer.best_objgap)
-            test_obj_gap_across_folds.append(test_obj_gap)
-
-        best_val_objgaps.append(np.mean(best_val_obj_gap_across_folds))
-        test_objgaps.append(np.mean(test_obj_gap_across_folds))
 
     wandb.log({
-        'best_val_obj_gap': np.mean(best_val_objgaps),
-        'test_obj_gap_mean': np.mean(test_objgaps),
-        'test_obj_gap_std': np.std(test_objgaps)
+        'time_mean': np.mean(times),
+        'time_std': np.std(times),
     })
 
 
