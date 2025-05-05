@@ -1,37 +1,104 @@
-# SSL for L2O
+# Principled data augmentation for learning to solve quadratic programming problems
 
-useful materials [SSL survey](https://github.com/LirongWu/awesome-graph-self-supervised-learning), [PyGCL](https://github.com/PyGCL/PyGCL), [PyTorch metric learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)
+Our work targets at generating more LP and LCQP data given some data instances, for supervised learning and contrastive pretraining to learn useful representations. Some useful materials [SSL survey](https://github.com/LirongWu/awesome-graph-self-supervised-learning), [PyGCL](https://github.com/PyGCL/PyGCL), [PyTorch metric learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)
 
 ## Environment setup
 
 ```angular2html
 conda create -y -n ipmgnn python=3.11
-conda activate ipmgnn
+conda activate da4l2o
 conda install -y pytorch==2.3.1 pytorch-cuda=12.1 -c pytorch -c nvidia
 pip install torch_geometric==2.5.3  # maybe latest also works
 pip install https://data.pyg.org/whl/torch-2.3.0%2Bcu121/torch_scatter-2.1.2%2Bpt23cu121-cp311-cp311-linux_x86_64.whl
 pip install https://data.pyg.org/whl/torch-2.3.0%2Bcu121/torch_sparse-0.6.18%2Bpt23cu121-cp311-cp311-linux_x86_64.whl
 pip install https://data.pyg.org/whl/torch-2.3.0%2Bcu121/torch_cluster-1.6.3%2Bpt23cu121-cp311-cp311-linux_x86_64.whl
-pip install wandb seaborn matplotlib cplex ortools hydra-core
-pip install pytorch-metric-learning
+pip install wandb hydra-core pytorch-metric-learning
 
-# the next are only if you want to evaluate solvers
 conda install -y -c conda-forge qpsolvers 
 # for larger problems you need a license, please visit https://www.gurobi.com/ for more information
 pip install gurobipy
 ```
 
-## Baselines
+## Data generation
+For generating LP/QP data used in our supervised learning (Table 1) and contrastive pretraining-supervised finetuning (Table 2) experiments, as well as larger instances (Table 7) please see to `generate_lp.ipynb` and `generate_qp.ipynb`.
 
-### GraphCL
-Graph level contrast. See the [paper](https://proceedings.neurips.cc/paper/2020/file/3fe230348e9a12c13120749e3f9fa4cd-Paper.pdf) and the official [repo](https://github.com/Shen-Lab/GraphCL), as well as the usage example [GraphCL](https://github.com/PyGCL/PyGCL/blob/main/examples/GraphCL.py)
+For out-of-distribution (OOD) dataset generation, please see to `generate_other_lp.ipynb` and `generate_other_qp.ipynb`. For the 4 LP problems, we adopt the code from https://arxiv.org/abs/1906.01629 and https://arxiv.org/abs/2310.10603. For the QP problems, we refer to https://arxiv.org/abs/2211.12443.
 
-Example code: `python graphcl.py exp.datapath=PATH2DATASET pretrain.method.GraphCLDropNode.strength=0.1 pretrain.method.GraphCLPerturbEdge.strength=0.1 pretrain.method.GraphCLMaskNode.strength=0.1`
+## Our proposed data augmentation
 
-GCC: rw subgraph, graph level CL
+__Remove idle variable__: We can remove a variable whose optimal value is 0.
 
-InfoGraph: global-local MI, no augmentation. GAN like loss
+__Remove inactive constraint__: We can remove a constraint that is inactive, i.e., a constraint `i` such that `A_i x < b` strictly holds. 
 
-IGSD: distillation, teacher-student, PPR augmentation. the loss is consistence loss. There's a predictor, minimize the corresponding L2 distance z1 <-> z2', z2 <-> z1'
+__Scale variable coefficients__: We can scale the coordinates of the problem. For all the coefficients wrt variable `x_i`, we scale them by a scalar `alpha_i != 0`.
 
-GAE: reconstruct edges
+__Scale constraint coefficients__: For a constraint i, we can scale all the `A_ij` and `b_i` with a positive scalar `alpha_j > 0`.
+
+__Add variable__: We can add a variable with some modification on `Q`, `A`, `c` such that the new variable takes an optimal value of 0.
+
+__Add constraint__: We can add a constraint that is a convex combination of some existing constraints. 
+
+## Deployment
+
+### Supervised learning
+
+#### Baselines
+__Normal__: For normal training, just run 
+
+Example code:  
+`python run.py exp.datapath=PATH2DATA`
+
+plus some customized arguments. Data scarcity is controlled by an argument `finetune.train_frac` and another controlling number of folds `finetune.folds`. In principle, if you use 10% of the training data, then you should run for 10 folds; if you use 20%, then 5 folds, etc.
+
+__GraphCL__: GraphCL proposes 3 types of graph data augmentation: node dropping, edge flipping, node feature masking. 
+
+Example code:  
+`python run_data_aug.py --config-name su_aug_dropn`  
+`python run_data_aug.py --config-name su_aug_edge`  
+`python run_data_aug.py --config-name su_aug_mask`
+
+#### Ours
+We provide each individual data augmentation as well as a combination of all. We introduce an interpolation factor on the augmentation strength, to make use of both the original data and augmented data. For the combination, we can randomly sample a subset of augmentations for each instance at each epoch. 
+
+Example code:  
+`python run_data_aug.py --config-name su_aug_addc`  
+`python run_data_aug.py --config-name run_data_aug`
+
+### Contrastive pretraining
+We pretrain an MPNN then use the labeled data for supervised finetuning. 
+
+#### Baselines
+
+__GraphCL__: GraphCL generates 2 views with their simple graph data augmentation. It performs graph level contrast, and uses NT-Xent loss. See the paper [GraphCL](https://proceedings.neurips.cc/paper/2020/file/3fe230348e9a12c13120749e3f9fa4cd-Paper.pdf) and the official [repo](https://github.com/Shen-Lab/GraphCL), as well as the usage example in [PyGCL](https://github.com/PyGCL/PyGCL/blob/main/examples/GraphCL.py).
+
+Example code: `python graphcl.py exp.datapath=PATH2DATA`
+
+__GCC__: GCC generates views with random walk subgraphs, also graph level contrast and NT-Xent loss. See their paper [GCC](https://arxiv.org/abs/2006.09963) and their official code [repo](https://github.com/THUDM/GCC).
+
+Example code: `python gcc.py`
+
+__InfoGraph__: InfoGraph maximized global-local level mutual information (MI), without data augmentation. A GAN-like loss is applied. See their paper [InfoGraph](https://arxiv.org/abs/1908.01000) and usage example in [PyGCL](https://github.com/PyGCL/PyGCL/blob/main/examples/InfoGraph.py).
+
+Example code: `python infograph.py`
+
+__IGSD__: It is a distillation-based method with a teacher-student network, and uses PPR augmentation. The loss is consistence loss to minimize the corresponding L2 distance z1 <-> z2', z2 <-> z1'. See their paper [IGSD](https://arxiv.org/abs/2010.12609), their wrapped [code](https://openreview.net/forum?id=Z532uNJyG5y).
+
+Example code: `python igsd.py`
+
+__MVGRL__: MVGRL also uses PPR augmentation but performs graph-node level contrast. See their paper [MVGRL](https://arxiv.org/abs/2006.05582) and usage example in [PyGCL](https://github.com/PyGCL/PyGCL/blob/main/examples/MVGRL_graph.py).
+
+Example code: `python mvgrl.py`
+
+__GAE__: Graph autoencoder to reconstruct edges. See implementation in [PyG](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.models.GAE.html#torch_geometric.nn.models.GAE).
+
+Example code: `python gae.py`
+
+#### Ours
+We can use our data augmentation to generate different views for contrastive learning. We use a combination of our augmentations that do not without touching the solutions of the problems. 
+
+Example code: `python pretrain_finetune.py --config-name pre_fine`
+
+### Generalization
+We provide more flexible finetuning with given pretrained model weights. Given a folder `PATH2MODEL` containing your pretrained models, just run
+
+Example code: `python finetune.py exp.datapath=PATH2DATA finetune.modelpath=PATH2MODEL`
