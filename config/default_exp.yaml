@@ -5,6 +5,6 @@ wandb:
 
 exp:
   debug: false
-  datapath: /work/log1/chendi.qian/qp_400_new
+  datapath: DATAPATH
   runs: 1
   ckpt: false

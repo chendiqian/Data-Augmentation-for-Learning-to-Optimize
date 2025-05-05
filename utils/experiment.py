@@ -32,4 +32,4 @@ def setup_wandb(args):
                name=args.wandb.name if args.wandb.name else None,
                mode="online" if args.wandb.enable else "disabled",
                config=OmegaConf.to_container(args, resolve=True, throw_on_missing=True),
-               entity="chendiqian")  # use your own entity
+               entity="ENTITY")  # use your own entity
