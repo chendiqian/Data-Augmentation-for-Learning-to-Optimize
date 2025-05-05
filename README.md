@@ -99,6 +99,8 @@ We can use our data augmentation to generate different views for contrastive lea
 Example code: `python pretrain_finetune.py --config-name pre_fine`
 
 ### Generalization
-We provide more flexible finetuning with given pretrained model weights. Given a folder `PATH2MODEL` containing your pretrained models, just run
+We provide more flexible finetuning pipeline with given pretrained model weights. Given a folder `PATH2MODEL` containing your pretrained models, just run
 
 Example code: `python finetune.py exp.datapath=PATH2DATA finetune.modelpath=PATH2MODEL`
+
+Example pretrained weights can be found in `pretrained_models`.
