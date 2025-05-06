@@ -8,14 +8,14 @@ from torch_geometric.utils import scatter
 from torch_sparse import SparseTensor, spmm
 
 
-def gurobi_solve_lp(A, b, c, lb=0.):
+def gurobi_solve_lp(A, b, c, lb=0., ub=float('inf')):
     import gurobipy as gp
     from gurobipy import GRB
 
     m, n = A.shape
     model = gp.Model("lp")
     model.Params.LogToConsole = 0
-    variables = model.addMVar(n, lb=lb)
+    variables = model.addMVar(n, lb=lb, ub=ub)
 
     # Objective: 0.5 x^T P x + q^T x
     model.setObjective(c @ variables, GRB.MINIMIZE)
