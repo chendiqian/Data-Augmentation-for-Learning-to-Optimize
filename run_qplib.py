@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 import hydra
 import numpy as np
 import torch
@@ -25,7 +26,7 @@ def main(args: DictConfig):
 
     transform = GCNNorm() if 'gcn' in args.backbone.conv else None
 
-    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
+    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)[:2]
     offset = train_subset.data.obj_solution.min() - 1.e-3  # To avoid log(0)
     train_subset.data.obj_solution = torch.log10(train_subset.data.obj_solution - offset)
 
@@ -36,7 +37,7 @@ def main(args: DictConfig):
                               pin_memory=True)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    train_losses = []
+    eval_dict = defaultdict(list)
 
     if args.finetune.modelpath is not None:
         model_dicts = os.listdir(args.finetune.modelpath)
@@ -73,13 +74,24 @@ def main(args: DictConfig):
                                             run, 0, log_folder_name,
                                             trainer, train_loader, model, optimizer, scheduler)
 
-        train_losses.append(trainer.best_objgap)  # the training loss
+        model.load_state_dict(best_model)
+        model.eval()
 
-    wandb.log({
-        'num_params': count_parameters(model),
-        'train_loss_mean': np.mean(train_losses),
-        'train_loss_std': np.std(train_losses)
-    })
+        with torch.no_grad():
+            for instance in train_loader:
+                qpid = f'QPLIB_{instance.qpid.item()}'
+                predict_obj = model(instance).item()
+                predict_obj = 10 ** predict_obj + offset
+                eval_dict[qpid].append(predict_obj)
+
+    summary_dict = dict()
+    for instance in train_loader:
+        qpid = f'QPLIB_{instance.qpid.item()}'
+        summary_dict[f'{qpid}_gt'] = instance.obj_solution.item()
+        summary_dict[f'{qpid}_mean'] = np.mean(eval_dict[qpid]).item()
+        summary_dict[f'{qpid}_std'] = np.std(eval_dict[qpid]).item()
+
+    wandb.log(summary_dict)
 
 
 if __name__ == '__main__':
