@@ -90,7 +90,7 @@ def main(args: DictConfig):
     summary_dict = dict()
     for instance in train_loader:
         qpid = f'QPLIB_{instance.qpid.item()}'
-        summary_dict[f'{qpid}_gt'] = instance.obj_solution.item()
+        summary_dict[f'{qpid}_gt'] = 10 ** instance.obj_solution.item() + offset
         summary_dict[f'{qpid}_mean'] = np.mean(eval_dict[qpid]).item()
         summary_dict[f'{qpid}_std'] = np.std(eval_dict[qpid]).item()
 
