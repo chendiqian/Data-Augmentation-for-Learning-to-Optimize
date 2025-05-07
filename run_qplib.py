@@ -12,7 +12,6 @@ from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
 from utils.evaluation import is_qp
-from utils.models import count_parameters
 from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
 from trainers.training_loops import supervised_train_loops
@@ -40,6 +39,7 @@ def main(args: DictConfig):
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     eval_dict = defaultdict(list)
+    train_losses = []
 
     if args.finetune.modelpath is not None:
         model_dicts = os.listdir(args.finetune.modelpath)
@@ -76,6 +76,7 @@ def main(args: DictConfig):
                                             run, 0, log_folder_name,
                                             trainer, train_loader, model, optimizer, scheduler)
 
+        train_losses.append(trainer.best_objgap)
         model.load_state_dict(best_model)
         model.eval()
 
@@ -87,7 +88,8 @@ def main(args: DictConfig):
                 predict_obj = 10 ** predict_obj + offset
                 eval_dict[qpid].append(predict_obj)
 
-    summary_dict = dict()
+    summary_dict = {'train_loss_mean': np.mean(train_losses),
+                    'train_loss_std': np.std(train_losses)}
     for instance in train_loader:
         qpid = f'QPLIB_{instance.qpid.item()}'
         summary_dict[f'{qpid}_gt'] = 10 ** instance.obj_solution.item() + offset
