@@ -34,7 +34,7 @@ class LPDataset(InMemoryDataset):
         for i in range(num_instance_pkg):
             data_list.extend(Batch.to_data_list(torch.load(osp.join(self.processed_dir, f'batch{i}.pt'))))
 
-        assert len(data_list) > 2000, "At least 1k val + test"
-        torch.save(self.collate(data_list[:-2000]), osp.join(self.processed_dir, 'train.pt'))
-        torch.save(self.collate(data_list[-2000:-1000]), osp.join(self.processed_dir, 'valid.pt'))
-        torch.save(self.collate(data_list[-1000:]), osp.join(self.processed_dir, 'test.pt'))
+        lens = len(data_list)
+        torch.save(self.collate(data_list[:int(0.8 * lens)]), osp.join(self.processed_dir, 'train.pt'))
+        torch.save(self.collate(data_list[int(0.8 * lens): int(0.9 * lens)]), osp.join(self.processed_dir, 'valid.pt'))
+        torch.save(self.collate(data_list[int(0.9 * lens):]), osp.join(self.processed_dir, 'test.pt'))
