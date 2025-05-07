@@ -29,7 +29,7 @@ def main(args: DictConfig):
     train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
     if args.exp.debug:
         train_subset = train_subset[:2]
-    offset = train_subset.data.obj_solution.min() - 1.e-3  # To avoid log(0)
+    offset = train_subset.data.obj_solution.min().item() - 1.e-3  # To avoid log(0)
     train_subset.data.obj_solution = torch.log10(train_subset.data.obj_solution - offset)
 
     train_loader = DataLoader(train_subset,
@@ -81,6 +81,7 @@ def main(args: DictConfig):
 
         with torch.no_grad():
             for instance in train_loader:
+                instance = instance.to(device)
                 qpid = f'QPLIB_{instance.qpid.item()}'
                 predict_obj = model(instance).item()
                 predict_obj = 10 ** predict_obj + offset
