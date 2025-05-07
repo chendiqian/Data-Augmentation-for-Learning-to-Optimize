@@ -17,7 +17,7 @@ from trainers.training_loops import supervised_train_loops
 from transforms.gcn_norm import GCNNorm
 
 
-@hydra.main(version_base=None, config_path='./config', config_name="run_qplib")
+@hydra.main(version_base=None, config_path='./config', config_name="run")
 def main(args: DictConfig):
     log_folder_name = save_run_config(args)
     setup_wandb(args)
@@ -27,15 +27,15 @@ def main(args: DictConfig):
     train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
     offset = train_subset.data.obj_solution.min() - 1.e-3  # To avoid log(0)
     train_subset.data.obj_solution = torch.log10(train_subset.data.obj_solution - offset)
+    train_subset=train_subset[:2]
 
     train_loader = DataLoader(train_subset,
-                              batch_size=args.finetune.batchsize,
+                              batch_size=1,
                               shuffle=True,
                               collate_fn=collate_fn_lp_base,
                               pin_memory=True)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    train_losses = []
 
     for run in range(args.exp.runs):
         model = GNN(is_qp=is_qp(train_subset[0]),
