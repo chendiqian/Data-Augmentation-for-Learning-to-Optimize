@@ -1,3 +1,4 @@
+import os
 import hydra
 import numpy as np
 import torch
@@ -37,7 +38,15 @@ def main(args: DictConfig):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_losses = []
 
-    for run in range(args.exp.runs):
+    if args.finetune.modelpath is not None:
+        model_dicts = os.listdir(args.finetune.modelpath)
+        model_dicts = [m for m in model_dicts if m.startswith('pretrain') and m.endswith('.pt')]
+        runs = len(model_dicts)
+    else:
+        model_dicts = None
+        runs = args.exp.runs
+
+    for run in range(runs):
         model = GNN(is_qp=is_qp(train_subset[0]),
                     conv=args.backbone.conv,
                     hid_dim=args.backbone.hidden,
@@ -47,6 +56,9 @@ def main(args: DictConfig):
                     num_mlp_layers=args.backbone.num_mlp_layers,
                     backbone_pred_layers=args.backbone.num_pred_layers,
                     norm=args.backbone.norm).to(device)
+        if model_dicts is not None:
+            state_dict = torch.load(os.path.join(args.finetune.modelpath, model_dicts[run]), map_location=device)
+            model.encoder.load_state_dict(state_dict)
 
         optimizer = optim.Adam(model.parameters(), lr=args.finetune.lr, weight_decay=args.finetune.weight_decay)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,
