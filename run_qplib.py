@@ -26,7 +26,9 @@ def main(args: DictConfig):
 
     transform = GCNNorm() if 'gcn' in args.backbone.conv else None
 
-    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)[:2]
+    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
+    if args.exp.debug:
+        train_subset = train_subset[:2]
     offset = train_subset.data.obj_solution.min() - 1.e-3  # To avoid log(0)
     train_subset.data.obj_solution = torch.log10(train_subset.data.obj_solution - offset)
 
