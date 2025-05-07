@@ -1,0 +1,23 @@
+pretrain:
+  num_samples: -1
+  epoch: 800
+  method:
+    DropInactiveConstraint:
+      strength: 0.07
+    ScaleConstraint:
+      strength: 1.03
+    ScaleCoordinate:
+      strength: 0.65
+    AddRedundantConstraint:
+      strength: 0.33
+      affinity: 2
+      use_sparse: False
+    AddDumbVariables:
+      strength: 0.26
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - default_pretrain
+  - _self_
