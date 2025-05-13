@@ -1,4 +1,5 @@
 finetune:
+  modelpath: null
   folds: 1
   lr: 1.e-3
   weight_decay: 0.

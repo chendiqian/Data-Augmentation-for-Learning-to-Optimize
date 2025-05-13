@@ -8,6 +8,38 @@ from tqdm import tqdm
 from utils.models import average_weights
 
 
+def supervised_train_loops(epochs, patience,
+                           ckpt, run_id, fold_id, log_folder_name,
+                           trainer, train_loader, model, optimizer, scheduler):
+    pbar = tqdm(range(epochs))
+    best_model = copy.deepcopy(model.state_dict())
+    for epoch in pbar:
+        train_loss = trainer.train(train_loader, model, optimizer)
+
+        if scheduler is not None:
+            scheduler.step(train_loss)
+
+        # a bit name abuse
+        if trainer.best_objgap > train_loss:
+            trainer.patience = 0
+            trainer.best_objgap = train_loss
+            best_model = copy.deepcopy(model.state_dict())
+            if ckpt:
+                torch.save(model.state_dict(), os.path.join(log_folder_name, f'best_model{run_id}_{fold_id}.pt'))
+        else:
+            trainer.patience += 1
+
+        if trainer.patience > patience:
+            break
+
+        stats_dict = {'train_loss': train_loss,
+                      'lr': scheduler.optimizer.param_groups[0]["lr"]}
+
+        pbar.set_postfix(stats_dict)
+        wandb.log(stats_dict)
+    return best_model
+
+
 def supervised_train_eval_loops(epochs, patience,
                                 ckpt, run_id, fold_id, log_folder_name,
                                 trainer, train_loader, val_loader, device, model, optimizer, scheduler):
