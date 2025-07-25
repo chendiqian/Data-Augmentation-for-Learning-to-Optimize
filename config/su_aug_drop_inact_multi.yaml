@@ -1,0 +1,11 @@
+data_aug:
+  density: 2   # get 2 instances
+  method:
+    OracleDropInactiveConstraint:
+      strength: 0.99  # we can drop all the inactive constraints
+
+defaults:
+  - default_exp
+  - default_backbone
+  - default_finetune
+  - _self_
