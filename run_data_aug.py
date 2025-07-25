@@ -4,7 +4,7 @@ import torch
 from omegaconf import DictConfig
 from torch import optim
 from torch.utils.data import DataLoader
-from torch_geometric.transforms import Compose
+# from torch_geometric.transforms import Compose
 
 import transforms
 import wandb
@@ -13,9 +13,9 @@ from data.dataset import LPDataset
 from models.hetero_gnn import GNN
 from trainers.supervised_trainer import PlainGNNTrainer
 from trainers.training_loops import supervised_train_eval_loops
-from transforms.gcn_norm import GCNNorm
+# from transforms.gcn_norm import GCNNorm
 from transforms.lp_preserve import ComboPreservedTransforms
-from transforms.wrapper import SingleAugmentWrapper
+from transforms.wrapper import SingleAugmentWrapper, SingleDensityAugmentWrapper
 from utils.experiment import save_run_config, setup_wandb
 from utils.evaluation import is_qp
 
@@ -30,16 +30,19 @@ def main(args: DictConfig):
     assert len(aug_dict) >= 1, "At least 1 augmentation!"
     if len(aug_dict) == 1:
         key = list(aug_dict.keys())[0]
-        transform = [SingleAugmentWrapper(getattr(transforms, key)(aug_dict[key]))]
+        if hasattr(args.data_aug, 'density') and args.data_aug.density > 1:
+            transform = SingleDensityAugmentWrapper(getattr(transforms, key)(aug_dict[key]), args.data_aug.density)
+        else:
+            transform = SingleAugmentWrapper(getattr(transforms, key)(aug_dict[key]))
     else:
-        transform = [ComboPreservedTransforms(aug_dict, args.data_aug.num_samples, True)]
+        transform = ComboPreservedTransforms(aug_dict, args.data_aug.num_samples, True)
 
-    if 'gcn' in args.backbone.conv:
-        extra_transform = GCNNorm()
-        transform.append(extra_transform)
-    else:
-        extra_transform = None
-    transform = Compose(transform)
+    # if 'gcn' in args.backbone.conv:
+    #     extra_transform = GCNNorm()
+    #     transform.append(extra_transform)
+    # else:
+    #     extra_transform = None
+    # transform = Compose(transform)
 
     max_folds = 1. / args.finetune.train_frac
     # make sure the fraction can be divided
@@ -47,8 +50,8 @@ def main(args: DictConfig):
     max_folds = min(int(max_folds), args.finetune.folds)
 
     train_set = LPDataset(args.exp.datapath, 'train', transform=transform)
-    valid_set = LPDataset(args.exp.datapath, 'valid', transform=extra_transform)
-    test_set = LPDataset(args.exp.datapath, 'test', transform=extra_transform)
+    valid_set = LPDataset(args.exp.datapath, 'valid', transform=None)
+    test_set = LPDataset(args.exp.datapath, 'test', transform=None)
 
     if args.exp.debug:
         valid_set = valid_set[:20]
