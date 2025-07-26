@@ -1,0 +1,43 @@
+wandb:
+  project: rebut_isolate
+  name: auged
+  enable: true
+exp:
+  debug: false
+  datapath: ...
+  runs: 3
+  ckpt: true
+backbone:
+  conv: sageconv
+  hidden: 192
+  num_encode_layers: 2
+  num_conv_layers: 6
+  num_mlp_layers: 1
+  num_pred_layers: 3
+  norm: graphnorm
+finetune:
+  modelpath: null
+  folds: 1
+  lr: 0.001
+  weight_decay: 0.0
+  epoch: 2000
+  patience: 200
+  batchsize: 32
+  train_frac: 1.0
+  num_pred_layers: 1
+data_aug:
+  num_samples: 2
+  method:
+    OracleDropIdleVariable:
+      strength: 0.0
+    OracleDropInactiveConstraint:
+      strength: 0.5
+    ScaleConstraint:
+      strength: 0.5
+    ScaleCoordinate:
+      strength: 0.5
+    AddRedundantConstraint:
+      strength: 0.6
+      affinity: 3
+    AddDumbVariables:
+      strength: 0.0
