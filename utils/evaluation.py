@@ -32,7 +32,7 @@ def gurobi_solve_lp(A, b, c, lb=0., ub=float('inf')):
         solution = variables.X
     else:
         duals = solution = None
-    return solution, duals
+    return solution, duals, model
 
 
 def gurobi_solve_qp(Q, c, Aub, bub, Aeq=None, beq=None, lb=0., ub=float('inf')):
@@ -63,7 +63,7 @@ def gurobi_solve_qp(Q, c, Aub, bub, Aeq=None, beq=None, lb=0., ub=float('inf')):
         solution = variables.X
     else:
         duals = solution = None
-    return solution, duals
+    return solution, duals, model
 
 
 def recover_lp_from_data(data, dtype=np.float32):
