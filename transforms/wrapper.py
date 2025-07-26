@@ -59,6 +59,26 @@ class SingleAugmentWrapper:
         return data
 
 
+class SingleDensityAugmentWrapper:
+    """
+    Return several views of the graph, for supervised setting. perturbation rate can vary
+    """
+
+    def __init__(self, transform, density):
+        # self.max_strength_dict = {tf:  for tf in transforms}
+        self.max_p = transform.p
+        # sorted_transforms_lists = sort_transforms(transforms)
+        self.transform = transform
+        self.density = density
+
+    def __call__(self, data: HeteroData) -> List[HeteroData]:
+        lsts = []
+        for _ in range(self.density):
+            self.transform.p = random.random() * self.max_p
+            lsts.append(self.transform(data))
+        return lsts
+
+
 # class ComboAugmentWrapper:
 #     def __init__(self, transforms: List):
 #         sorted_transforms_lists = sort_transforms(transforms)

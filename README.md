@@ -24,6 +24,8 @@ For generating LP/QP data used in our supervised learning (Table 1) and contrast
 
 For out-of-distribution (OOD) dataset generation, please see to `generate_other_lp.ipynb` and `generate_other_qp.ipynb`. For the 4 LP problems, we adopt the code from https://arxiv.org/abs/1906.01629 and https://arxiv.org/abs/2310.10603. For the QP problems, we refer to https://arxiv.org/abs/2211.12443.
 
+For QPLIB, first you need to install QPLIB on your own from https://qplib.zib.de/qplib.zip, then extract, and play around with our `QPLIB_enrich.ipynb`, which processes the raw data into our data form, and enrich the set. 
+
 ## Our proposed data augmentation
 
 __Remove idle variable__: We can remove a variable whose optimal value is 0.
@@ -53,16 +55,18 @@ plus some customized arguments. Data scarcity is controlled by an argument `fine
 __GraphCL__: GraphCL proposes 3 types of graph data augmentation: node dropping, edge flipping, node feature masking. 
 
 Example code:  
-`python run_data_aug.py --config-name su_aug_dropn`  
-`python run_data_aug.py --config-name su_aug_edge`  
-`python run_data_aug.py --config-name su_aug_mask`
+`python run.py --config-name su_aug_dropn`  
+`python run.py --config-name su_aug_edge`  
+`python run.py --config-name su_aug_mask`
 
 #### Ours
 We provide each individual data augmentation as well as a combination of all. We introduce an interpolation factor on the augmentation strength, to make use of both the original data and augmented data. For the combination, we can randomly sample a subset of augmentations for each instance at each epoch. 
 
 Example code:  
-`python run_data_aug.py --config-name su_aug_addc`  
-`python run_data_aug.py --config-name run_data_aug`
+`python run.py --config-name su_aug_addc`  
+`python run.py --config-name run_data_aug`
+
+We provide various options for augmentations, including sampling from a pool of augmentations `data_aug.num_samples`, and repeats of augmentations so that each instance will be augmented into several new instances `data_aug.density`
 
 ### Contrastive pretraining
 We pretrain an MPNN then use the labeled data for supervised finetuning. 
@@ -98,9 +102,20 @@ We can use our data augmentation to generate different views for contrastive lea
 
 Example code: `python pretrain_finetune.py --config-name pre_fine`
 
+#### Picking the best model
+For tuning the contrastive pretraining, we pick the best contrastive configuration, such that its finetuning performance is the best. Consider setting `finetune.whole=true` if you have enough computing resources, such that the whole pretrained models are finetuned, if `false`, then it performs linear probing, i.e., freeze the first layers and train a linear layer predictor head only. 
+
 ### Generalization
 We provide more flexible finetuning pipeline with given pretrained model weights. Given a folder `PATH2MODEL` containing your pretrained models, just run
 
 Example code: `python finetune.py exp.datapath=PATH2DATA finetune.modelpath=PATH2MODEL`
 
 Example pretrained weights can be found in `pretrained_models`.
+
+In `pretrained_models` we provide a number of pretrained model weights on random instances, including contrastive pretraining, supervised learning with/without augmentations. All pretrained with the full training set.
+
+### QPLIB
+
+We pick LCQP instances from QPLIB that feasible and fits into the memory. Due to the extreme scarce data and high size and distribution heterogeneity, it is infeasible to do normal train validation split on QPLIB. We provide two ways probing QPLIB.
+1. We compare training QPLIB from scratch and using a contrastive pretrained model trained on the random QP instances, and show the training convergence. `python run_qplib.py`.
+2. We enrich the dataset, by perturbing the coefficients. Then we compare supervised learning with/without augmentation. `python run_qplib_enrich.py`.

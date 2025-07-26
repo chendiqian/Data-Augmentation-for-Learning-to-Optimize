@@ -1,10 +1,13 @@
 from typing import List, Tuple
+import itertools
 
 import torch
 from torch_geometric.data import Data, Batch
 
 
 def collate_fn_lp_base(graphs: List[Data]):
+    if isinstance(graphs[0], list):
+        graphs = list(itertools.chain.from_iterable(graphs))
     new_batch = Batch.from_data_list(graphs, exclude_keys=['x', 'nulls'])  # we drop the dumb x features
     # finish the half of symmetric edges
     flip_tensor = torch.tensor([1, 0])

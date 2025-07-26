@@ -51,6 +51,47 @@ class PlainGNNTrainer:
         return objgaps
 
 
+class QPLIBTrainer:
+    def __init__(self):
+        self.best_objgap = 1.e8
+        self.patience = 0
+        self.loss_func = torch.nn.MSELoss(reduction='mean')
+
+    def train(self, dataloader, model, optimizer):
+        model.train()
+
+        train_losses = 0.
+        num_graphs = 0
+        for i, data in enumerate(dataloader):
+            data = data.to(device)
+            label = data.obj_solution
+            optimizer.zero_grad()
+            obj_pred = model(data)
+            loss = self.loss_func(obj_pred, label)
+
+            train_losses += loss.detach() * data.num_graphs
+            num_graphs += data.num_graphs
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0, error_if_nonfinite=True)
+            optimizer.step()
+
+        return train_losses.item() / num_graphs
+
+    @torch.no_grad()
+    def eval(self, dataloader, model):
+        model.eval()
+
+        losses = 0.
+        for i, data in enumerate(dataloader):
+            data = data.to(device)
+            obj_pred = model(data)
+            loss = self.loss_func(obj_pred, data.obj_solution)
+            losses += loss
+
+        return losses.item() / len(dataloader)
+
+
 class LinearTrainer(PlainGNNTrainer):
     """
     The only difference is this trainer uses a loader that gives us the labels
