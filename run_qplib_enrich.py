@@ -7,6 +7,9 @@ from omegaconf import DictConfig
 from torch import optim
 from torch.utils.data import DataLoader
 
+import transforms
+from transforms.lp_preserve import ComboPreservedTransforms
+from transforms.wrapper import SingleAugmentWrapper, SingleDensityAugmentWrapper
 from data.collate_func import collate_fn_lp_base
 from data.dataset import LPDataset
 from utils.experiment import save_run_config, setup_wandb
@@ -20,7 +23,23 @@ def main(args: DictConfig):
     log_folder_name = save_run_config(args)
     setup_wandb(args)
 
-    train_subset = LPDataset(args.exp.datapath, 'train')
+    if hasattr(args, 'data_aug'):
+        # do data augmentation
+        aug_dict = {aug_class: kwargs.strength for aug_class, kwargs in args.data_aug.method.items() if
+                    kwargs.strength > 0.}
+        assert len(aug_dict) >= 1, "At least 1 augmentation!"
+        if len(aug_dict) == 1:
+            key = list(aug_dict.keys())[0]
+            if hasattr(args.data_aug, 'density') and args.data_aug.density > 1:
+                transform = SingleDensityAugmentWrapper(getattr(transforms, key)(aug_dict[key]), args.data_aug.density)
+            else:
+                transform = SingleAugmentWrapper(getattr(transforms, key)(aug_dict[key]))
+        else:
+            transform = ComboPreservedTransforms(aug_dict, args.data_aug.num_samples, True)
+    else:
+        transform = None
+
+    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
     valid_subset = LPDataset(args.exp.datapath, 'valid')
     test_subset = LPDataset(args.exp.datapath, 'test')
 
