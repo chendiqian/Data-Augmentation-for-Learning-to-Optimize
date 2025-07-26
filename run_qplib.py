@@ -25,7 +25,8 @@ def main(args: DictConfig):
 
     transform = GCNNorm() if 'gcn' in args.backbone.conv else None
 
-    train_subset = LPDataset(args.exp.datapath, 'train', transform=transform)
+    # the test set in our data process is the original instances, the train and valid splits are enriched.
+    train_subset = LPDataset(args.exp.datapath, 'test', transform=transform)
     if args.exp.debug:
         train_subset = train_subset[:2]
     offset = train_subset.data.obj_solution.min().item() - 1.e-3  # To avoid log(0)
