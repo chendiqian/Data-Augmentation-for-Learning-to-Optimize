@@ -1,4 +1,4 @@
-program: run_data_aug.py
+program: run.py
 method: bayes
 project: sweep_qp_combo
 run_cap: 20

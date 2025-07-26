@@ -1,0 +1,79 @@
+program: pretrain_finetune.py
+method: bayes
+project: tune_ssl_smpled
+run_cap: 50
+entity: chendiqian
+
+metric:
+  goal: minimize
+  name: best_val_obj_gap
+parameters:
+  wandb.enable:
+    value: true
+
+  exp.debug:
+    value: false
+  exp.datapath:
+    value: /work/log1/chendi.qian/ssl/qp_100_100_0.05_0.05
+  exp.runs:
+    value: 1
+  exp.ckpt:
+    value: false
+
+  finetune.whole:
+    value: false
+  finetune.epoch:
+    value: 2000
+  finetune.patience:
+    value: 2000
+  finetune.batchsize:
+    value: 256
+  finetune.train_frac:
+    value: 0.2
+  finetune.folds:
+    value: 10
+
+  pretrain.lr:
+    value: 1.e-3
+  pretrain.weight_decay:
+    value: 0.
+  pretrain.patience:
+    value: 50
+  pretrain.batchsize:
+    value: 128
+  pretrain.temperature:
+    value: 0.1
+  pretrain.num_pred_layers:
+    value: 0
+  pretrain.epoch:
+    values: [500, 800]
+
+  pretrain.num_samples:
+    values: [1, 2, 3, -1]
+
+  pretrain.method.DropInactiveConstraint.strength:
+    distribution: uniform
+    max: 0.1
+    min: 0.01
+  pretrain.method.ScaleConstraint.strength:
+    distribution: uniform
+    max: 1.2
+    min: 0.2
+  pretrain.method.ScaleCoordinate.strength:
+    distribution: uniform
+    max: 1.2
+    min: 0.2
+  pretrain.method.AddRedundantConstraint.strength:
+    distribution: uniform
+    max: 0.5
+    min: 0.01
+  pretrain.method.AddDumbVariables.strength:
+    distribution: uniform
+    max: 0.5
+    min: 0.01
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}

@@ -55,16 +55,16 @@ plus some customized arguments. Data scarcity is controlled by an argument `fine
 __GraphCL__: GraphCL proposes 3 types of graph data augmentation: node dropping, edge flipping, node feature masking. 
 
 Example code:  
-`python run_data_aug.py --config-name su_aug_dropn`  
-`python run_data_aug.py --config-name su_aug_edge`  
-`python run_data_aug.py --config-name su_aug_mask`
+`python run.py --config-name su_aug_dropn`  
+`python run.py --config-name su_aug_edge`  
+`python run.py --config-name su_aug_mask`
 
 #### Ours
 We provide each individual data augmentation as well as a combination of all. We introduce an interpolation factor on the augmentation strength, to make use of both the original data and augmented data. For the combination, we can randomly sample a subset of augmentations for each instance at each epoch. 
 
 Example code:  
-`python run_data_aug.py --config-name su_aug_addc`  
-`python run_data_aug.py --config-name run_data_aug`
+`python run.py --config-name su_aug_addc`  
+`python run.py --config-name run_data_aug`
 
 We provide various options for augmentations, including sampling from a pool of augmentations `data_aug.num_samples`, and repeats of augmentations so that each instance will be augmented into several new instances `data_aug.density`
 
