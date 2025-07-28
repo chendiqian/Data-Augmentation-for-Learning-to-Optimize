@@ -116,6 +116,6 @@ In `pretrained_models` we provide a number of pretrained model weights on random
 
 ### QPLIB
 
-We pick LCQP instances from QPLIB that feasible and fits into the memory. Due to the extreme scarce data and high size and distribution heterogeneity, it is infeasible to do normal train validation split on QPLIB. We provide two ways probing QPLIB.
-1. We compare training QPLIB from scratch and using a contrastive pretrained model trained on the random QP instances, and show the training convergence. `python run_qplib.py`.
-2. We enrich the dataset, by perturbing the coefficients. Then we compare supervised learning with/without augmentation. `python run_qplib_enrich.py`.
+Due to the extreme scarce data and high size and distribution heterogeneity, it is infeasible to do normal train validation split on QPLIB. We provide the following way probing QPLIB.
+1. We generate a foundation dataset containing large scale instances of random, SVM and Lasso problems, compare training QPLIB, with size varying from 1000 to 1500 variables and constraints. Note that the data generation is quite efficient as we don't need to solve them for contrastive pretraining. 
+2. We pick feasible LCQP instances from QPLIB, relax the integral constraints, and trains an MPNN to fit on them. We compare supervised learning from scratch and from the pretrained model. `python run_qplib.py`
